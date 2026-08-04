@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+coverage/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+.tmp/
+
+# Generated
+out/
+
+# Testing
+playwright-report/
+
+# Misc
+*.local
