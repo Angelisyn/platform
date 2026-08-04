@@ -1,57 +1,110 @@
 # Angelisyn
 
-> Modern cybersecurity platform for attack surface discovery, reconnaissance, asset intelligence, vulnerability assessment, and security research.
+> Discover • Analyze • Protect
+
+<p align="center">
+  Cybersecurity platform focused on attack surface discovery, asset intelligence, and security research.
+</p>
 
 ---
 
 ## Vision
 
-Build a professional open-source cybersecurity platform that helps organizations discover, analyze, monitor, and secure their attack surface.
+Angelisyn aims to become a modern cybersecurity platform for discovering, analyzing, and securing internet-facing infrastructure.
+
+The platform combines asset discovery, reconnaissance, vulnerability intelligence, reporting, and automation into one unified system.
 
 ---
 
-## Core Principles
-
-- Secure by Design
-- Performance First
-- Modular Architecture
-- Open Source
-- Developer Friendly
-- Automation Ready
-
----
-
-## Planned Features
+## Features
 
 - Asset Discovery
-- Port Scanning
 - DNS Intelligence
 - WHOIS Lookup
 - SSL Analysis
 - HTTP Fingerprinting
 - Technology Detection
-- CVE Intelligence
+- Port Scanning
+- Security Headers Analysis
+- Vulnerability Intelligence
 - Reporting
-- Dashboards
+- Dashboard
 - REST API
-- CLI
-- Plugin System
 
 ---
 
 ## Repository Structure
 
-```
-apps/
-packages/
-services/
-scripts/
-tests/
-docs/
+```text
+platform/
+│
+├── apps/
+├── packages/
+├── services/
+├── scripts/
+├── docs/
+└── tests/
 ```
 
 ---
 
-## Status
+## Technology Stack
 
-🚧 Under active development.
+| Layer | Technology |
+|--------|------------|
+| Frontend | Next.js |
+| Backend | Fastify |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Database | PostgreSQL |
+| Cache | Redis |
+| Package Manager | pnpm |
+| Monorepo | Turborepo |
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| Architecture | System design |
+| Roadmap | Project roadmap |
+| Development | Developer guide |
+| API | API documentation |
+| Security | Security policy |
+
+---
+
+## Roadmap
+
+- Repository Foundation
+- Core Platform
+- Dashboard
+- Scanner Engine
+- Asset Intelligence
+- Reporting
+- API
+- CLI
+- Plugin System
+
+---
+
+## Contributing
+
+Contributions are welcome.
+
+Please read the CONTRIBUTING.md guide before submitting pull requests.
+
+---
+
+## Security
+
+Please report security issues privately.
+
+See SECURITY.md.
+
+---
+
+## License
+
+MIT License
