@@ -89,15 +89,17 @@ export function AuthProvider({
   };
 
   const logout = () => {
-    authService.logout();
+  authService.logout();
 
-    setState({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
-  };
+  setState({
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: false,
+  });
+
+  window.location.href = '/login';
+};
 
   const value = useMemo<AuthContextValue>(
     () => ({

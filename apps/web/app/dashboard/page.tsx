@@ -1,34 +1,36 @@
-"use client";
+'use client';
 
-import {
-  Card,
-  Heading,
-  Badge,
-  Button,
-} from "@angelisyn/ui";
+import { ProtectedRoute } from '@/components/auth/protected-route';
+import { useAuth } from '@/hooks/use-auth';
 
-export default function Dashboard() {
+export default function DashboardPage() {
+  const {
+    user,
+    logout,
+  } = useAuth();
+
   return (
-    <>
-      <Heading>
-        Dashboard
-      </Heading>
+    <ProtectedRoute>
+      <main className="mx-auto max-w-4xl p-8">
+        <h1 className="text-3xl font-bold">
+          Dashboard
+        </h1>
 
-      <Badge>
-        Development
-      </Badge>
+        <p className="mt-4">
+          Welcome,
+          {' '}
+          {user?.name}
+        </p>
 
-      <Card>
-        Angelisyn Platform Dashboard
-      </Card>
+        <p>{user?.email}</p>
 
-      <br />
-
-      <Button
-        onClick={() => alert("Coming Soon")}
-      >
-        Create Project
-      </Button>
-    </>
+        <button
+          onClick={logout}
+          className="mt-8 rounded bg-red-600 px-4 py-2 text-white"
+        >
+          Logout
+        </button>
+      </main>
+    </ProtectedRoute>
   );
 }
