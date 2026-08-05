@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "baseUrl": ".",
+"paths": {
+  "@angelisyn/ui": ["../../packages/ui/src"],
+  "@angelisyn/types": ["../../packages/types/src"],
+  "@angelisyn/config": ["../../packages/config/src"]
+}
 }
