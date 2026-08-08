@@ -1,148 +1,54 @@
-# Development Guide
+# Angelisyn Development Guide
 
-## Introduction
+## Requirements
+Use the versions declared by the repository configuration and package manager metadata.
 
-This guide explains how to set up the Angelisyn development environment and contribute to the project.
-
----
-
-# Development Environment
-
-## Required Software
-
-- Git
-- Visual Studio Code
-- Node.js (LTS)
+Primary tooling:
+- Node.js
 - pnpm
-- Docker Desktop
-- PostgreSQL
-- Redis
-
----
-
-# Recommended VS Code Extensions
-
-- ESLint
-- Prettier
-- GitLens
-- Docker
-- GitHub Pull Requests
-- Error Lens
-- YAML
-- Markdown All in One
-
----
-
-# Repository Structure
-
-```text
-platform/
-
-apps/
-packages/
-services/
-docs/
-scripts/
-tests/
-```
-
----
-
-# Git Workflow
-
-Main Branch
-
-```
-main
-```
-
-Development Branch
-
-```
-develop
-```
-
-Feature Branch
-
-```
-feature/<feature-name>
-```
-
-Example
-
-```
-feature/dashboard
-feature/scanner
-feature/api
-```
-
----
-
-# Commit Convention
-
-Examples
-
-```
-feat: add dashboard authentication
-
-fix: resolve dns parser bug
-
-docs: update architecture
-
-refactor: optimize scanner engine
-
-test: add unit tests
-```
-
----
-
-# Pull Requests
-
-Every feature should
-
-- Build successfully
-- Pass all tests
-- Follow coding standards
-- Include documentation updates
-
----
-
-# Testing
-
-Every module should include
-
-- Unit Tests
-- Integration Tests
-- End-to-End Tests
-
----
-
-# Code Reviews
-
-Every Pull Request should be reviewed before merging into the main branch.
-
----
-
-# Development Principles
-
-- Keep modules independent.
-- Write readable code.
-- Document public APIs.
-- Avoid duplicate logic.
-- Prefer composition over inheritance.
-- Write tests for new features.
-
----
-
-# Future Tooling
-
-The following tools will be configured during Phase 2.
-
-- pnpm Workspace
-- Turborepo
+- Git
 - TypeScript
-- ESLint
-- Prettier
-- Husky
-- Docker
-- GitHub Actions
+- Turborepo
+- Prisma
+
+## Install
+From the repository root:
+
+```powershell
+pnpm install
+```
+
+## Development
+Use the scripts defined by the repository and individual workspace packages. Prefer existing Turborepo tasks for multi-package workflows.
+
+## Verification
+For a normal code change, choose relevant checks such as:
+
+```powershell
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+```
+
+Only use commands that actually exist in the repository. Inspect `package.json` files before assuming a script name.
+
+## Database
+Document the project's real Prisma/database workflow here, including environment setup and migration commands, once confirmed.
+
+Never commit secrets or production credentials.
+
+## Recommended Workflow
+1. `git status`
+2. Inspect relevant code.
+3. Make a focused change.
+4. Run targeted checks.
+5. Run broader checks when shared code changes.
+6. Inspect `git diff`.
+7. Record important architectural changes in `docs/DECISIONS.md`.
+
+## Environment
+Document required environment variables by name and purpose, never their secret values.
+
+## Troubleshooting
+Record recurring build, dependency, database and environment problems here with verified fixes.

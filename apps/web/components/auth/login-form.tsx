@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   loginSchema,
   type LoginFormValues,
-} from '@/lib/validators/auth';
+} from '@/lib/validator/auth';
 
 export function LoginForm() {
   const router = useRouter();

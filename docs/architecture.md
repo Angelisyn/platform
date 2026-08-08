@@ -1,184 +1,66 @@
 # Angelisyn Architecture
 
-## Overview
+## Purpose
+This document is the architectural source of truth for Angelisyn.
 
-Angelisyn is designed as a modular cybersecurity platform.
-
-Each capability is separated into independent applications, services, and reusable packages.
-
-This architecture enables scalability, maintainability, and future expansion.
-
----
-
-## High-Level Architecture
-
-```text
-                Internet
-                    │
-                    ▼
-          ┌──────────────────┐
-          │   Next.js Frontend │
-          └──────────────────┘
-                    │
-                    ▼
-             REST API Gateway
-                    │
-     ┌──────────────┼──────────────┐
-     ▼              ▼              ▼
- Discovery      Intelligence     Reporting
- Service          Service         Service
-     ▼              ▼              ▼
- PostgreSQL      Redis         Object Storage
-```
-
----
-
-## Repository Layout
+## Repository Layers
 
 ```text
 platform/
-
-apps/
-packages/
-services/
-scripts/
-docs/
-tests/
+├── apps/       # user-facing applications
+├── packages/   # reusable shared packages
+├── services/   # service-level functionality
+├── scripts/    # repository automation
+├── tests/      # tests
+└── docs/       # documentation
 ```
 
----
-
-## Applications
-
-### Dashboard
-
-User interface.
-
-Technology:
-
-- Next.js
-- React
-- TailwindCSS
-
----
+## Application Boundaries
 
 ### API
+Path: `apps/api`
 
-Backend API.
+Purpose: backend/API functionality.
 
-Technology
+### Web Application
+Path: `apps/web`
 
-- Fastify
-- TypeScript
+Purpose: main Angelisyn web/dashboard application.
 
----
+### Website
+Path: `apps/website`
 
-## Services
+Status: paused. It remains preserved but is not part of active development unless explicitly requested.
 
-Discovery
+### IDE
+Path: `apps/ide`
 
-Responsible for
+Status: future application. It is intended to remain separate from the dashboard and API.
 
-- DNS
-- WHOIS
-- Port Scan
-- HTTP
-- SSL
+## Shared Packages
 
----
+Current repository packages include:
+- `packages/config`
+- `packages/eslint-config`
+- `packages/sdk`
+- `packages/types`
+- `packages/ui`
+- `packages/validation`
 
-Intelligence
+Document each package's public responsibility here as its implementation stabilizes.
 
-Responsible for
+## Architecture Rules
+- Keep application-specific code inside its application.
+- Put reusable code in shared packages only when multiple consumers genuinely need it.
+- Avoid circular dependencies.
+- Preserve package boundaries.
+- Prefer explicit contracts between applications and services.
 
-- CVEs
-- Fingerprinting
-- Technologies
-- Threat Intelligence
+## Data Flow
+Document important request/data flows here as they become stable.
 
----
+## Authentication
+Document the real authentication flow here once the implementation is finalized. Keep this document synchronized with code; do not invent behavior.
 
-Reporting
-
-Responsible for
-
-- Reports
-- Export
-- Dashboards
-
----
-
-## Packages
-
-Reusable libraries.
-
-Examples
-
-- logger
-- config
-- ui
-- types
-- auth
-- scanner
-
----
-
-## Database
-
-Primary Database
-
-PostgreSQL
-
-Caching
-
-Redis
-
----
-
-## Security
-
-Authentication
-
-JWT
-
-Authorization
-
-RBAC
-
-HTTPS Everywhere
-
-Rate Limiting
-
-Audit Logs
-
-Input Validation
-
----
-
-## Deployment
-
-Development
-
-Docker Compose
-
-Production
-
-Docker
-
-Reverse Proxy
-
-Cloud Infrastructure
-
----
-
-## Future
-
-Plugin System
-
-CLI
-
-Public API
-
-AI Assistant
-
-Enterprise Edition
+## Source of Truth
+Code and executable configuration are authoritative for implementation details. This document explains stable architecture and boundaries, not every implementation detail.

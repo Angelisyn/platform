@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   registerSchema,
   type RegisterFormValues,
-} from '@/lib/validators/auth';
+} from '@/lib/validator/auth';
 
 export function RegisterForm() {
   const router = useRouter();

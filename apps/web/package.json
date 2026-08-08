@@ -14,7 +14,10 @@
     "react-dom": "19.2.4",
     "@angelisyn/ui": "workspace:*",
 "@angelisyn/types": "workspace:*",
-"@angelisyn/config": "workspace:*"
+"@angelisyn/config": "workspace:*",
+    "react-hook-form": "7.85.0",
+    "@hookform/resolvers": "5.7.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -67,11 +67,11 @@ platform/
 
 | Document | Description |
 |----------|-------------|
-| Architecture | System design |
-| Roadmap | Project roadmap |
-| Development | Developer guide |
-| API | API documentation |
-| Security | Security policy |
+| [Architecture](docs/ARCHITECTURE.md) | System design and application boundaries |
+| [Roadmap](docs/ROADMAP.md) | Project roadmap |
+| [Development](docs/DEVELOPMENT.md) | Developer guide |
+| [API](docs/API.md) | API conventions and contracts |
+| [Security Architecture](docs/SECURITY_ARCHITECTURE.md) | Implemented security architecture |
 
 ---
 
@@ -91,17 +91,13 @@ platform/
 
 ## Contributing
 
-Contributions are welcome.
-
-Please read the CONTRIBUTING.md guide before submitting pull requests.
+Contributions are welcome. Follow the repository instructions and the development guide before submitting pull requests.
 
 ---
 
 ## Security
 
-Please report security issues privately.
-
-See SECURITY.md.
+Please report security issues privately. A security-reporting policy has not yet been documented in this repository.
 
 ---
 
