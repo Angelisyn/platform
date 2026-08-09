@@ -20,3 +20,13 @@ export interface UpdateAgentRequest {
   model?: string;
   projectId?: string;
 }
+
+export interface ExecuteAgentRequest {
+  prompt: string;
+}
+
+export interface AgentExecutionResponse {
+  output: string;
+  provider: string;
+  model: string;
+}

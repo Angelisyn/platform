@@ -1,14 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Badge, Button, Card, Heading, Input, Spinner } from '@angelisyn/ui';
+import { getModelsForProvider, getSupportedProviders } from '@angelisyn/types';
 import { agentsService } from '@/services/agents.service';
 import { projectsService } from '@/services/projects.service';
 import { createAgentSchema, updateAgentSchema, type CreateAgentFormValues, type UpdateAgentFormValues } from '@/lib/validator/agents';
-import type { Agent } from '@/types/agents';
+import type { Agent, AgentExecutionResponse } from '@/types/agents';
 import type { Project } from '@/types/projects';
+
+const SECRET_PATTERN = /(sk-[a-zA-Z0-9_\-]{15,}|bearer\s+eyJ|ghp_[a-zA-Z0-9]{30,}|xoxb-[0-9a-zA-Z-]+)/i;
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -18,6 +21,11 @@ export default function AgentsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [testingAgent, setTestingAgent] = useState<Agent | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [executing, setExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState<AgentExecutionResponse | null>(null);
+  const [executionError, setExecutionError] = useState<string | null>(null);
 
   const createForm = useForm<CreateAgentFormValues>({
     resolver: zodResolver(createAgentSchema),
@@ -27,6 +35,12 @@ export default function AgentsPage() {
   const editForm = useForm<UpdateAgentFormValues>({
     resolver: zodResolver(updateAgentSchema),
   });
+
+  const selectedCreateProvider = useWatch({ control: createForm.control, name: 'provider' }) ?? '';
+  const createModels = getModelsForProvider(selectedCreateProvider);
+
+  const selectedEditProvider = useWatch({ control: editForm.control, name: 'provider' }) ?? '';
+  const editModels = getModelsForProvider(selectedEditProvider);
 
   useEffect(() => {
     let isMounted = true;
@@ -84,7 +98,42 @@ export default function AgentsPage() {
 
   const startEditing = (agent: Agent) => {
     setEditingAgent(agent);
+    setTestingAgent(null);
+    setShowCreateForm(false);
     editForm.reset({ name: agent.name, provider: agent.provider, model: agent.model, projectId: agent.projectId });
+  };
+
+  const startTesting = (agent: Agent) => {
+    setTestingAgent(agent);
+    setPrompt('');
+    setExecutionResult(null);
+    setExecutionError(null);
+    setShowCreateForm(false);
+    setEditingAgent(null);
+  };
+
+  const handleExecute = async () => {
+    if (!testingAgent || executing) return;
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      setExecutionError('Prompt is required');
+      return;
+    }
+    if (SECRET_PATTERN.test(trimmedPrompt)) {
+      setExecutionError('Prompt appears to contain an API key or secret token. Please remove all secrets before running.');
+      return;
+    }
+    try {
+      setExecuting(true);
+      setExecutionError(null);
+      setExecutionResult(null);
+      const res = await agentsService.execute(testingAgent.id, { prompt: trimmedPrompt });
+      setExecutionResult(res);
+    } catch (err) {
+      setExecutionError(err instanceof Error ? err.message : 'Failed to execute agent');
+    } finally {
+      setExecuting(false);
+    }
   };
 
   const handleUpdate = async (values: UpdateAgentFormValues) => {
@@ -122,7 +171,7 @@ export default function AgentsPage() {
           <Heading>Agents</Heading>
           <p className="mt-1 text-sm text-slate-400">Manage your AI agents.</p>
         </div>
-        <Button onClick={() => { setShowCreateForm(!showCreateForm); setEditingAgent(null); }}>
+        <Button onClick={() => { setShowCreateForm(!showCreateForm); setEditingAgent(null); setTestingAgent(null); }}>
           {showCreateForm ? 'Cancel' : 'New Agent'}
         </Button>
       </div>
@@ -147,14 +196,39 @@ export default function AgentsPage() {
                 </div>
                 <div>
                   <label className="block mb-1 text-sm text-slate-300">Provider</label>
-                  <Input {...createForm.register('provider')} placeholder="openai" />
+                  <select
+                    {...createForm.register('provider')}
+                    onChange={(e) => {
+                      createForm.setValue('provider', e.target.value, { shouldValidate: true });
+                      createForm.setValue('model', '', { shouldValidate: true });
+                    }}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">Select a provider</option>
+                    {getSupportedProviders().map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
                   {createForm.formState.errors.provider && (
                     <p className="mt-1 text-xs text-red-400">{createForm.formState.errors.provider.message}</p>
                   )}
                 </div>
                 <div>
                   <label className="block mb-1 text-sm text-slate-300">Model</label>
-                  <Input {...createForm.register('model')} placeholder="gpt-4" />
+                  <select
+                    {...createForm.register('model')}
+                    disabled={!selectedCreateProvider}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                  >
+                    <option value="">Select a model</option>
+                    {createModels.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.id})
+                      </option>
+                    ))}
+                  </select>
                   {createForm.formState.errors.model && (
                     <p className="mt-1 text-xs text-red-400">{createForm.formState.errors.model.message}</p>
                   )}
@@ -196,14 +270,39 @@ export default function AgentsPage() {
               </div>
               <div>
                 <label className="block mb-1 text-sm text-slate-300">Provider</label>
-                <Input {...editForm.register('provider')} />
+                <select
+                  {...editForm.register('provider')}
+                  onChange={(e) => {
+                    editForm.setValue('provider', e.target.value, { shouldValidate: true });
+                    editForm.setValue('model', '', { shouldValidate: true });
+                  }}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Select a provider</option>
+                  {getSupportedProviders().map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
                 {editForm.formState.errors.provider && (
                   <p className="mt-1 text-xs text-red-400">{editForm.formState.errors.provider.message}</p>
                 )}
               </div>
               <div>
                 <label className="block mb-1 text-sm text-slate-300">Model</label>
-                <Input {...editForm.register('model')} />
+                <select
+                  {...editForm.register('model')}
+                  disabled={!selectedEditProvider}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                >
+                  <option value="">Select a model</option>
+                  {editModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.id})
+                    </option>
+                  ))}
+                </select>
                 {editForm.formState.errors.model && (
                   <p className="mt-1 text-xs text-red-400">{editForm.formState.errors.model.message}</p>
                 )}
@@ -228,6 +327,75 @@ export default function AgentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </Card>
+      )}
+
+      {testingAgent && (
+        <Card>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Test Agent: {testingAgent.name}</h2>
+                <p className="text-xs text-slate-400">
+                  Provider: <span className="text-slate-200 font-mono">{testingAgent.provider}</span> | Model: <span className="text-slate-200 font-mono">{testingAgent.model}</span>
+                </p>
+              </div>
+              <button type="button" onClick={() => setTestingAgent(null)} className="text-slate-400 hover:text-white text-sm">
+                Close
+              </button>
+            </div>
+
+            {executionError && <Alert>{executionError}</Alert>}
+
+            <div>
+              <label className="block mb-1 text-sm text-slate-300">Prompt</label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Enter prompt for the agent..."
+                rows={3}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Do not enter API keys, passwords, tokens, or other secrets in your prompt.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button onClick={() => { void handleExecute(); }}>
+                {executing ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner />
+                    <span>Executing...</span>
+                  </div>
+                ) : (
+                  'Run Agent'
+                )}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setTestingAgent(null)}
+                className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+            </div>
+
+            {executionResult && (
+              <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-2">
+                  <span>Output</span>
+                  <div className="flex gap-2 items-center">
+                    <Badge>{executionResult.provider}</Badge>
+                    <span className="font-mono text-slate-300">{executionResult.model}</span>
+                  </div>
+                </div>
+                <pre className="whitespace-pre-wrap font-mono text-sm text-slate-200 bg-slate-900 p-3 rounded border border-slate-800">
+                  {executionResult.output}
+                </pre>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -259,6 +427,9 @@ export default function AgentsPage() {
                   </p>
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-800">
+                  <button onClick={() => startTesting(agent)} className="rounded px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-slate-800">
+                    Test Agent
+                  </button>
                   <button onClick={() => startEditing(agent)} className="rounded px-3 py-1.5 text-xs font-medium text-blue-400 hover:bg-slate-800">
                     Edit
                   </button>

@@ -84,7 +84,8 @@
       ]
     },
     "moduleNameMapper": {
-      "^@angelisyn/config$": "<rootDir>/../../../packages/config/src"
+      "^@angelisyn/config$": "<rootDir>/../../../packages/config/src",
+      "^@angelisyn/types$": "<rootDir>/../../../packages/types/dist"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

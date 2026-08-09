@@ -1,5 +1,5 @@
 import { apiRequest } from '@/lib/api';
-import type { Agent, CreateAgentRequest, UpdateAgentRequest } from '@/types/agents';
+import type { Agent, AgentExecutionResponse, CreateAgentRequest, ExecuteAgentRequest, UpdateAgentRequest } from '@/types/agents';
 
 export class AgentsService {
   async getAll(token?: string): Promise<Agent[]> {
@@ -38,6 +38,15 @@ export class AgentsService {
     const authToken = token ?? (typeof window !== 'undefined' ? localStorage.getItem('access_token') ?? undefined : undefined);
     return apiRequest<Agent>(`/agents/${id}`, {
       method: 'DELETE',
+      token: authToken,
+    });
+  }
+
+  async execute(id: string, data: ExecuteAgentRequest, token?: string): Promise<AgentExecutionResponse> {
+    const authToken = token ?? (typeof window !== 'undefined' ? localStorage.getItem('access_token') ?? undefined : undefined);
+    return apiRequest<AgentExecutionResponse, ExecuteAgentRequest>(`/agents/${id}/execute`, {
+      method: 'POST',
+      body: data,
       token: authToken,
     });
   }

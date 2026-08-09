@@ -14,6 +14,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { AgentsService } from './agents.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
+import { ExecuteAgentDto } from './dto/execute-agent.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('agents')
@@ -47,5 +48,14 @@ export class AgentsController {
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.agentsService.removeForUser(id, user.id);
+  }
+
+  @Post(':id/execute')
+  execute(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ExecuteAgentDto,
+  ) {
+    return this.agentsService.executeForUser(id, user.id, dto);
   }
 }

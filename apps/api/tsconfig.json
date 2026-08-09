@@ -23,8 +23,8 @@
     "noFallthroughCasesInSwitch": false
   },
   "baseUrl": ".",
-"paths": {
-  "@angelisyn/types": ["../../packages/types/src"],
-  "@angelisyn/config": ["../../packages/config/src"]
-}
+  "paths": {
+    "@angelisyn/types": ["../../packages/types/dist"],
+    "@angelisyn/config": ["../../packages/config/src"]
+  }
 }

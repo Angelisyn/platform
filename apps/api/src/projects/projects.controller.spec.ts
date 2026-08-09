@@ -1,5 +1,6 @@
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
+import { TargetsService } from '../targets/targets.service';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 describe('ProjectsController', () => {
@@ -18,6 +19,10 @@ describe('ProjectsController', () => {
     removeForUser,
   } as unknown as ProjectsService;
 
+  const targetsService = {
+    findByProjectForUser: jest.fn(),
+  } as unknown as TargetsService;
+
   const mockUser: AuthenticatedUser = {
     id: 'user-1',
     email: 'user@example.com',
@@ -28,7 +33,7 @@ describe('ProjectsController', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    controller = new ProjectsController(service);
+    controller = new ProjectsController(service, targetsService);
   });
 
   it('should call findAllForUser with current user id', async () => {
@@ -65,5 +70,11 @@ describe('ProjectsController', () => {
   it('should call removeForUser with id and user id', async () => {
     await controller.remove('p1', mockUser);
     expect(removeForUser).toHaveBeenCalledWith('p1', 'user-1');
+  });
+
+  it('should call findByProjectForUser for GET /projects/:id/targets', async () => {
+    (targetsService.findByProjectForUser as jest.Mock).mockResolvedValue([]);
+    await controller.findTargetsForProject('p1', mockUser);
+    expect(targetsService.findByProjectForUser).toHaveBeenCalledWith('p1', 'user-1');
   });
 });

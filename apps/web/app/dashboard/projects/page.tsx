@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Badge, Button, Card, Heading, Input, Spinner } from '@angelisyn/ui';
@@ -108,7 +109,7 @@ export default function ProjectsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Heading>Projects</Heading>
-          <p className="mt-1 text-sm text-slate-400">Manage your Angelisyn platform projects.</p>
+          <p className="mt-1 text-sm text-slate-400">Organize security assessments by project scope.</p>
         </div>
         <Button onClick={() => { setShowCreateForm(!showCreateForm); setEditingProject(null); }}>
           {showCreateForm ? 'Cancel' : 'New Project'}
@@ -191,7 +192,7 @@ export default function ProjectsPage() {
       ) : projects.length === 0 ? (
         <div className="rounded-xl border border-slate-800 bg-slate-950 p-12 text-center text-slate-400">
           <p className="text-lg font-medium text-slate-300">No projects yet</p>
-          <p className="mt-1 text-sm text-slate-500">Create your first project to start adding AI agents.</p>
+          <p className="mt-1 text-sm text-slate-500">Create your first project to organize targets, scans, and security assessments.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -207,6 +208,15 @@ export default function ProjectsPage() {
                   <p className="mt-3 text-xs text-slate-500">
                     Created {new Date(project.createdAt).toLocaleDateString()}
                   </p>
+
+                  {/* Security Assessment Quick Links */}
+                  <div className="mt-4 flex items-center gap-3 text-xs">
+                    <Link href="/dashboard/targets" className="text-blue-400 hover:underline">Targets</Link>
+                    <span className="text-slate-700">&bull;</span>
+                    <Link href="/dashboard/scans" className="text-blue-400 hover:underline">Scans</Link>
+                    <span className="text-slate-700">&bull;</span>
+                    <Link href="/dashboard/findings" className="text-blue-400 hover:underline">Findings</Link>
+                  </div>
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-800">
                   <button

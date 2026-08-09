@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@angelisyn/ui": ["../../packages/ui/src"],
+      "@angelisyn/types": ["../../packages/types/dist"],
+      "@angelisyn/config": ["../../packages/config/src"]
     }
   },
   "include": [
@@ -30,11 +33,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"],
-  "baseUrl": ".",
-"paths": {
-  "@angelisyn/ui": ["../../packages/ui/src"],
-  "@angelisyn/types": ["../../packages/types/src"],
-  "@angelisyn/config": ["../../packages/config/src"]
-}
+  "exclude": ["node_modules"]
 }

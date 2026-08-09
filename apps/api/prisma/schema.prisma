@@ -7,6 +7,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TargetType {
+  IP_ADDRESS
+  HOSTNAME
+  DOMAIN
+}
+
+enum TargetStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ScanType {
+  NETWORK_DISCOVERY
+  PORT_SCAN
+  VULNERABILITY_SCAN
+  WEB_ASSESSMENT
+}
+
+enum ScanExecutionMode {
+  LOCAL
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum FindingStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  FALSE_POSITIVE
+}
+
+enum ReportStatus {
+  GENERATING
+  READY
+  FAILED
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -26,23 +76,27 @@ model Project {
   slug      String   @unique
 
   ownerId   String
-  owner     User @relation(fields: [ownerId], references: [id])
+  owner     User     @relation(fields: [ownerId], references: [id])
 
   agents    Agent[]
+  targets   Target[]
+  scans     Scan[]
+  findings  Finding[]
+  reports   Report[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Agent {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
 
   name        String
   provider    String
   model       String
 
   projectId   String
-  project     Project @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id])
 
   createdAt   DateTime @default(now())
 }
@@ -61,4 +115,95 @@ model ApiKey {
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+}
+
+model Target {
+  id        String       @id @default(cuid())
+  name      String
+  target    String
+  type      TargetType   @default(IP_ADDRESS)
+  status    TargetStatus @default(ACTIVE)
+
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  scans     Scan[]
+  findings  Finding[]
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([projectId])
+}
+
+model Scan {
+  id            String            @id @default(cuid())
+  name          String
+  scanType      ScanType          @default(PORT_SCAN)
+  executionMode ScanExecutionMode @default(LOCAL)
+  scanner       String            @default("Local Scanner")
+  status        ScanStatus        @default(QUEUED)
+  rawOutput     String?           @db.Text
+  errorDetails  String?           @db.Text
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  targetId      String
+  target        Target            @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  projectId     String
+  project       Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  findings      Finding[]
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([targetId])
+  @@index([projectId])
+}
+
+model Finding {
+  id             String          @id @default(cuid())
+  title          String
+  severity       FindingSeverity @default(INFO)
+  status         FindingStatus   @default(OPEN)
+  description    String          @db.Text
+  evidence       String?         @db.Text
+  impact         String?         @db.Text
+  recommendation String?         @db.Text
+  cve            String?
+  port           Int?
+
+  targetId       String
+  target         Target          @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  scanId         String
+  scan           Scan            @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  projectId      String
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  detectedAt     DateTime        @default(now())
+
+  @@index([targetId])
+  @@index([scanId])
+  @@index([projectId])
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  name       String
+  status     ReportStatus @default(READY)
+
+  projectId  String
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  targetId   String?
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([projectId])
 }

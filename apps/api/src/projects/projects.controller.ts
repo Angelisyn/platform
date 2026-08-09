@@ -14,11 +14,15 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { TargetsService } from '../targets/targets.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly targetsService: TargetsService,
+  ) {}
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
@@ -28,6 +32,14 @@ export class ProjectsController {
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.projectsService.findOneForUser(id, user.id);
+  }
+
+  @Get(':projectId/targets')
+  findTargetsForProject(
+    @Param('projectId') projectId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.targetsService.findByProjectForUser(projectId, user.id);
   }
 
   @Post()
