@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from 'react';
@@ -70,7 +69,12 @@ export function AuthProvider({
   }, []);
 
   useEffect(() => {
-    void refreshUser();
+    const restoreAuth = async () => {
+      await Promise.resolve();
+      await refreshUser();
+    };
+
+    void restoreAuth();
   }, [refreshUser]);
 
   const login = async (credentials: LoginRequest) => {
@@ -89,28 +93,25 @@ export function AuthProvider({
   };
 
   const logout = () => {
-  authService.logout();
+    authService.logout();
 
-  setState({
-    user: null,
-    token: null,
-    isAuthenticated: false,
-    isLoading: false,
-  });
+    setState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
 
-  window.location.href = '/login';
-};
+    window.location.href = '/login';
+  };
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      ...state,
-      login,
-      register,
-      logout,
-      refreshUser,
-    }),
-    [state, refreshUser],
-  );
+  const value: AuthContextValue = {
+    ...state,
+    login,
+    register,
+    logout,
+    refreshUser,
+  };
 
   return (
     <AuthContext.Provider value={value}>
