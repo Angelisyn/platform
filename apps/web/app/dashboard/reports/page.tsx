@@ -87,6 +87,16 @@ export default function ReportsPage() {
     }
   };
 
+  const handleExportReport = (report: Report) => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(report, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `${report.name.toLowerCase().replace(/\s+/g, '_')}_summary.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -145,10 +155,10 @@ export default function ReportsPage() {
 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => alert(`Report export for ${report.name} queued for backend delivery.`)}
+                    onClick={() => handleExportReport(report)}
                     className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-medium"
                   >
-                    Export Summary
+                    Export JSON Summary
                   </button>
                 </div>
               </div>

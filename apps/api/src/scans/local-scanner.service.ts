@@ -69,66 +69,80 @@ export class LocalScannerService {
 
   /**
    * Probe a single TCP port with a configurable timeout.
-   * Returns 'open' if connection succeeds, 'closed'/'filtered' otherwise.
+   * Uses a strictly guarded cleanup callback to prevent race conditions.
    */
   private probePort(
     host: string,
     port: number,
-    timeoutMs = 2000,
+    timeoutMs = 1500,
   ): Promise<PortScanResult> {
     return new Promise((resolve) => {
       const socket = new net.Socket();
+      let isDone = false;
       let banner = '';
+      let bannerTimer: NodeJS.Timeout | null = null;
 
-      const cleanup = () => {
-        socket.removeAllListeners();
-        socket.destroy();
+      const finish = (result: PortScanResult) => {
+        if (isDone) return;
+        isDone = true;
+
+        if (bannerTimer) {
+          clearTimeout(bannerTimer);
+          bannerTimer = null;
+        }
+
+        try {
+          socket.removeAllListeners();
+          socket.destroy();
+        } catch {
+          // Ignore socket destruction errors
+        }
+
+        resolve(result);
       };
 
       socket.setTimeout(timeoutMs);
 
       socket.once('connect', () => {
-        // Try to grab a banner (service may send data on connect)
+        // Wait briefly for optional banner payload on connect
+        bannerTimer = setTimeout(() => {
+          finish({
+            port,
+            state: 'open',
+            service: WELL_KNOWN_PORTS[port],
+            banner: banner || undefined,
+          });
+        }, 300);
+
         socket.once('data', (data) => {
           banner = data.toString('utf-8').trim().slice(0, 256);
-          cleanup();
-          resolve({
+          finish({
             port,
             state: 'open',
             service: WELL_KNOWN_PORTS[port],
-            banner: banner || undefined,
+            banner,
           });
         });
-
-        // If no data within 500ms after connect, still mark as open
-        setTimeout(() => {
-          cleanup();
-          resolve({
-            port,
-            state: 'open',
-            service: WELL_KNOWN_PORTS[port],
-            banner: banner || undefined,
-          });
-        }, 500);
       });
 
       socket.once('timeout', () => {
-        cleanup();
-        resolve({ port, state: 'filtered' });
+        finish({ port, state: 'filtered' });
       });
 
       socket.once('error', () => {
-        cleanup();
-        resolve({ port, state: 'closed' });
+        finish({ port, state: 'closed' });
       });
 
-      socket.connect(port, host);
+      try {
+        socket.connect(port, host);
+      } catch (err) {
+        finish({ port, state: 'closed' });
+      }
     });
   }
 
   /**
    * Execute a local port scan against the specified target.
-   * Scans ports sequentially to avoid overwhelming the target or the host OS.
    */
   async executeScan(
     targetValue: string,

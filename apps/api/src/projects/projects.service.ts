@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -27,28 +33,61 @@ export class ProjectsService {
   }
 
   async createForUser(userId: string, dto: CreateProjectDto) {
-    return this.prisma.project.create({
-      data: {
-        ...dto,
-        ownerId: userId,
-      },
-    });
+    try {
+      return await this.prisma.project.create({
+        data: {
+          name: dto.name,
+          slug: dto.slug,
+          ownerId: userId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('A project with this slug already exists');
+      }
+      throw error;
+    }
   }
 
   async updateForUser(id: string, userId: string, dto: UpdateProjectDto) {
     await this.findOneForUser(id, userId);
 
-    return this.prisma.project.update({
-      where: { id },
-      data: dto,
-    });
+    try {
+      return await this.prisma.project.update({
+        where: { id },
+        data: dto,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('A project with this slug already exists');
+      }
+      throw error;
+    }
   }
 
   async removeForUser(id: string, userId: string) {
     await this.findOneForUser(id, userId);
 
-    return this.prisma.project.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.project.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Cannot delete project with dependent resources',
+        );
+      }
+      throw error;
+    }
   }
 }
