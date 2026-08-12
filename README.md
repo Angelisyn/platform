@@ -50,28 +50,28 @@ platform/
 
 ## Technology Stack
 
-| Layer | Technology |
-|--------|------------|
-| Frontend | Next.js |
-| Backend | Fastify |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| Database | PostgreSQL |
-| Cache | Redis |
-| Package Manager | pnpm |
-| Monorepo | Turborepo |
+| Layer           | Technology   |
+| --------------- | ------------ |
+| Frontend        | Next.js      |
+| Backend         | NestJS       |
+| Language        | TypeScript   |
+| Styling         | Tailwind CSS |
+| Database        | PostgreSQL   |
+| Cache           | Redis        |
+| Package Manager | pnpm         |
+| Monorepo        | Turborepo    |
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design and application boundaries |
-| [Roadmap](docs/ROADMAP.md) | Project roadmap |
-| [Development](docs/DEVELOPMENT.md) | Developer guide |
-| [API](docs/API.md) | API conventions and contracts |
-| [Security Architecture](docs/SECURITY_ARCHITECTURE.md) | Implemented security architecture |
+| Document                                               | Description                              |
+| ------------------------------------------------------ | ---------------------------------------- |
+| [Architecture](docs/ARCHITECTURE.md)                   | System design and application boundaries |
+| [Roadmap](docs/ROADMAP.md)                             | Project roadmap                          |
+| [Development](docs/DEVELOPMENT.md)                     | Developer guide                          |
+| [API](docs/API.md)                                     | API conventions and contracts            |
+| [Security Architecture](docs/SECURITY_ARCHITECTURE.md) | Implemented security architecture        |
 
 ---
 
@@ -97,9 +97,9 @@ Contributions are welcome. Follow the repository instructions and the developmen
 
 ## Security
 
-Please report security issues privately. A security-reporting policy has not yet been documented in this repository.
+Please report security vulnerabilities privately. Do not create public GitHub issues for security vulnerabilities.
 
----
+See [SECURITY.md](SECURITY.md) for the security reporting policy.
 
 ## License
 
