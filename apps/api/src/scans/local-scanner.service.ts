@@ -52,13 +52,12 @@ const WELL_KNOWN_PORTS: Record<number, string> = {
 const SCAN_TYPE_PORTS: Record<string, number[]> = {
   NETWORK_DISCOVERY: [22, 80, 443, 3389],
   PORT_SCAN: [
-    21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445,
-    993, 995, 1433, 1521, 3306, 3389, 5432, 5900, 6379,
-    8080, 8443, 27017,
+    21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995, 1433, 1521,
+    3306, 3389, 5432, 5900, 6379, 8080, 8443, 27017,
   ],
   VULNERABILITY_SCAN: [
-    21, 22, 23, 25, 80, 110, 135, 139, 443, 445,
-    1433, 3306, 3389, 5432, 6379, 8080, 27017,
+    21, 22, 23, 25, 80, 110, 135, 139, 443, 445, 1433, 3306, 3389, 5432, 6379,
+    8080, 27017,
   ],
   WEB_ASSESSMENT: [80, 443, 8080, 8443, 8888, 9090],
 };
@@ -135,7 +134,7 @@ export class LocalScannerService {
 
       try {
         socket.connect(port, host);
-      } catch (err) {
+      } catch {
         finish({ port, state: 'closed' });
       }
     });

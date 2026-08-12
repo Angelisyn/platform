@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { ScansService } from './scans.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LocalScannerService } from './local-scanner.service';

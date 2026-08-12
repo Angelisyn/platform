@@ -1,44 +1,61 @@
-# Code of Conduct
+## Summary
 
-## Our Pledge
+<!-- Briefly describe what this Pull Request changes. -->
 
-We are committed to providing a welcoming, respectful, and collaborative environment for everyone.
+## Related Issue
 
----
+Closes #
 
-## Expected Behavior
+## Type of Change
 
-- Be respectful.
-- Be constructive.
-- Welcome different perspectives.
-- Focus on technical discussions.
-- Help improve the project.
+- [ ] Feature
+- [ ] Bug fix
+- [ ] Security improvement
+- [ ] Testing
+- [ ] Documentation
+- [ ] Performance improvement
+- [ ] Refactoring
+- [ ] Other
 
----
+## Changes Made
 
-## Unacceptable Behavior
+<!-- List the important changes. -->
 
-- Harassment
-- Personal attacks
-- Discrimination
-- Spam
-- Abusive language
+-
+-
+-
 
----
+## Testing
 
-## Enforcement
+<!-- Explain how you tested the change. -->
 
-Project maintainers may remove content or restrict participation that violates this Code of Conduct.
+- [ ] Relevant tests added or updated
+- [ ] Existing tests pass
+- [ ] Lint checked
+- [ ] Build checked
+- [ ] Tested locally
 
----
+## Security Considerations
 
-## Scope
+Does this change affect authentication, authorization, scanning, secrets, APIs, or other security-sensitive functionality?
 
-This Code of Conduct applies to
+- [ ] No security impact
+- [ ] Yes — explain below
 
-- GitHub
-- Discussions
-- Pull Requests
-- Issues
-- Documentation
-- Community spaces
+<!-- If yes, explain the security implications. -->
+
+## Documentation
+
+- [ ] Documentation updated
+- [ ] Documentation not required
+
+## Screenshots
+
+<!-- Add screenshots for UI changes when useful. -->
+
+## Checklist
+
+- [ ] My changes are focused on this Pull Request's purpose.
+- [ ] I did not commit secrets or credentials.
+- [ ] I did not include unrelated changes.
+- [ ] I have reviewed the contribution guidelines.
