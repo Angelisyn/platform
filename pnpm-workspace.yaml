@@ -2,14 +2,11 @@ packages:
   - "apps/*"
   - "packages/*"
   - "services/*"
+
 allowBuilds:
   argon2: true
   "@prisma/client": true
   "@prisma/engines": true
   prisma: true
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
-
-onlyBuiltDependencies:
-  - sharp
-  - unrs-resolver
+  sharp: true
+  unrs-resolver: true
