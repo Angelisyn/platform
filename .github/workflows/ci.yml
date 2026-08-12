@@ -31,6 +31,15 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Verify repository root
+        run: |
+          pwd
+          ls -la
+          echo "----- package.json -----"
+          cat package.json
+          echo "----- pnpm scripts -----"
+          pnpm run
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
