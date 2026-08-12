@@ -2,93 +2,68 @@
 
 Thank you for your interest in contributing to Angelisyn.
 
-We welcome contributions that improve the platform while maintaining high standards of quality, security, and maintainability.
+Angelisyn is a cybersecurity platform focused on attack-surface discovery, asset intelligence, security research, and security assessment workflows.
+
+We welcome contributions that improve the platform while maintaining high standards of quality, security, reliability, and maintainability.
 
 ---
 
-# Before You Start
+## Before You Start
 
 Please read:
 
-- README.md
-- docs/architecture.md
-- docs/development.md
-- docs/coding-standards.md
+- `README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DEVELOPMENT.md`
+- `docs/CODING-STANDARDS.md`
+
+If any of these files use different capitalization or filenames in the repository, use the actual repository paths.
 
 ---
 
-# Development Workflow
+## What You Can Contribute
 
-1. Fork the repository.
-2. Create a feature branch.
+Contributions may include:
 
-```
+- Frontend development
+- Backend/API development
+- Security improvements
+- Security testing
+- Automated testing
+- Bug fixes
+- Documentation
+- Developer tooling
+- Performance improvements
+- Accessibility and UI improvements
+- Research and analysis related to Angelisyn
+
+If you are new to the project, start with a small issue labeled `good first issue`.
+
+---
+
+## Development Workflow
+
+### 1. Choose an Issue
+
+Before starting significant work:
+
+- Look through the open issues.
+- Choose an existing issue when possible.
+- Comment on the issue if you intend to work on it.
+- Ask questions if the requirements are unclear.
+
+For larger changes, discuss the proposed approach before implementation.
+
+### 2. Create a Branch
+
+Do not work directly on `main`.
+
+Use a descriptive branch name:
+
+```text
 feature/<feature-name>
+fix/<bug-name>
+security/<security-change>
+test/<test-change>
+docs/<documentation-change>
 ```
-
-Example
-
-```
-feature/dashboard
-feature/scanner
-feature/reporting
-```
-
-3. Implement your changes.
-
-4. Add or update tests.
-
-5. Update documentation if required.
-
-6. Submit a Pull Request.
-
----
-
-# Pull Request Requirements
-
-Every Pull Request should
-
-- Build successfully
-- Pass all tests
-- Follow coding standards
-- Include documentation updates
-- Focus on a single feature or bug fix
-
----
-
-# Reporting Bugs
-
-Please include
-
-- Environment
-- Steps to reproduce
-- Expected behavior
-- Actual behavior
-- Logs (if available)
-
----
-
-# Feature Requests
-
-Describe
-
-- The problem
-- Proposed solution
-- Alternatives considered
-- Additional context
-
----
-
-# Coding Standards
-
-Follow
-
-docs/coding-standards.md
-
----
-
-# Security
-
-Please do not disclose security vulnerabilities publicly.
-
-See SECURITY.md.
