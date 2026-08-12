@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TargetsService } from './targets.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { TargetType } from '@prisma/client';
 
 describe('TargetsService', () => {
