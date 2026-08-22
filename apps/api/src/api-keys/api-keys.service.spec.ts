@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
 import { ApiKeysService } from './api-keys.service';
@@ -196,6 +197,69 @@ describe('ApiKeysService', () => {
       await expect(
         service.getDecryptedKeyForInternalUse('key-1', 'user-2'),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('Prisma P2003 error handling', () => {
+    it('should throw BadRequestException on P2003 during createForUser', async () => {
+      encrypt.mockReturnValue('enc_iv:authTag:encryptedSecret');
+      create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'My OpenAI Key',
+        provider: 'openai',
+        key: 'sk-proj-1234567890abcdef',
+      };
+      await expect(
+        service.createForUser('user-1', dto),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('should throw BadRequestException on P2003 during removeForUser', async () => {
+      findFirst.mockResolvedValue({
+        id: 'key-1',
+        name: 'To Delete',
+        provider: 'openai',
+        key: 'enc_payload_3',
+        userId: 'user-1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      decrypt.mockReturnValue('sk-proj-1234567890abcdef');
+      deleteKey.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      await expect(
+        service.removeForUser('key-1', 'user-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('should re-throw non-P2003 Prisma errors', async () => {
+      encrypt.mockReturnValue('enc_iv:authTag:encryptedSecret');
+      create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed',
+          { code: 'P2002', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'My OpenAI Key',
+        provider: 'openai',
+        key: 'sk-proj-1234567890abcdef',
+      };
+      await expect(
+        service.createForUser('user-1', dto),
+      ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     });
   });
 });

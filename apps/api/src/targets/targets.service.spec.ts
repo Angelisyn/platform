@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Prisma, TargetType } from '@prisma/client';
 import { TargetsService } from './targets.service';
-import { TargetType } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('TargetsService', () => {
   let service: TargetsService;
@@ -119,6 +120,62 @@ describe('TargetsService', () => {
 
       await expect(service.createForUser('user-1', dto)).rejects.toThrow(
         ForbiddenException,
+      );
+    });
+  });
+
+  describe('Prisma P2003 error handling', () => {
+    it('should throw BadRequestException on P2003 during createForUser', async () => {
+      mockPrismaService.project.findFirst.mockResolvedValue(mockProject);
+      mockPrismaService.target.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'Web Server',
+        target: '192.168.1.100',
+        type: TargetType.IP_ADDRESS,
+        projectId: 'proj-1',
+      };
+      await expect(service.createForUser('user-1', dto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException on P2003 during removeForUser', async () => {
+      mockPrismaService.target.findFirst.mockResolvedValue(mockTarget);
+      mockPrismaService.target.delete.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      await expect(
+        service.removeForUser('target-1', 'user-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should re-throw non-P2003 Prisma errors', async () => {
+      mockPrismaService.project.findFirst.mockResolvedValue(mockProject);
+      mockPrismaService.target.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed',
+          { code: 'P2002', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'Web Server',
+        target: '192.168.1.100',
+        type: TargetType.IP_ADDRESS,
+        projectId: 'proj-1',
+      };
+      await expect(service.createForUser('user-1', dto)).rejects.toThrow(
+        Prisma.PrismaClientKnownRequestError,
       );
     });
   });

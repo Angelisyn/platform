@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiKeysService } from '../api-keys/api-keys.service';
 import { ProviderAdapterService } from './providers/provider-adapter.service';
@@ -226,6 +227,87 @@ describe('AgentsService', () => {
     await expect(service.removeForUser('a1', 'user-2')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  describe('Prisma P2003 error handling', () => {
+    it('should throw BadRequestException on P2003 during createForUser', async () => {
+      findFirstProject.mockResolvedValue({ id: 'p1', ownerId: 'user-1' });
+      createAgent.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'Agent 1',
+        provider: 'openai',
+        model: 'gpt-4o',
+        projectId: 'p1',
+      };
+      await expect(service.createForUser('user-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException on P2003 during updateForUser', async () => {
+      findFirstAgent.mockResolvedValue({
+        id: 'a1',
+        name: 'Agent 1',
+        provider: 'openai',
+        model: 'gpt-4o',
+        projectId: 'p1',
+      });
+      findFirstProject.mockResolvedValue({ id: 'p2', ownerId: 'user-1' });
+      updateAgent.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      await expect(
+        service.updateForUser('a1', 'user-1', { projectId: 'p2' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('should throw BadRequestException on P2003 during removeForUser', async () => {
+      findFirstAgent.mockResolvedValue({
+        id: 'a1',
+        name: 'Agent 1',
+        projectId: 'p1',
+      });
+      deleteAgent.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      await expect(service.removeForUser('a1', 'user-1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('should re-throw non-P2003 Prisma errors', async () => {
+      findFirstProject.mockResolvedValue({ id: 'p1', ownerId: 'user-1' });
+      createAgent.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed',
+          { code: 'P2002', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'Agent 1',
+        provider: 'openai',
+        model: 'gpt-4o',
+        projectId: 'p1',
+      };
+      await expect(service.createForUser('user-1', dto)).rejects.toThrow(
+        Prisma.PrismaClientKnownRequestError,
+      );
+    });
   });
 
   describe('executeForUser', () => {

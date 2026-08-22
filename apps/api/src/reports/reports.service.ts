@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { ReportStatus, FindingSeverity } from '@prisma/client';
@@ -50,14 +51,27 @@ export class ReportsService {
       throw new ForbiddenException('Project does not belong to user or does not exist');
     }
 
-    const report = await this.prisma.report.create({
-      data: {
-        name: dto.name,
-        projectId: dto.projectId,
-        targetId: dto.targetId,
-        status: ReportStatus.READY,
-      },
-    });
+    let report;
+    try {
+      report = await this.prisma.report.create({
+        data: {
+          name: dto.name,
+          projectId: dto.projectId,
+          targetId: dto.targetId,
+          status: ReportStatus.READY,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'The specified project does not exist',
+        );
+      }
+      throw error;
+    }
 
     return this.enrichReportWithSummary(report, project.name);
   }
