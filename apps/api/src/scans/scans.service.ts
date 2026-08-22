@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateScanDto } from './dto/create-scan.dto';
 import { ScanStatus, ScanExecutionMode } from '@prisma/client';
@@ -143,17 +144,30 @@ export class ScansService {
     }
 
     // 3. Create Scan record in QUEUED status
-    const scan = await this.prisma.scan.create({
-      data: {
-        name: dto.name,
-        scanType: dto.scanType,
-        executionMode: ScanExecutionMode.LOCAL,
-        scanner: 'Local Process Engine',
-        status: ScanStatus.QUEUED,
-        projectId: dto.projectId,
-        targetId: dto.targetId,
-      },
-    });
+    let scan;
+    try {
+      scan = await this.prisma.scan.create({
+        data: {
+          name: dto.name,
+          scanType: dto.scanType,
+          executionMode: ScanExecutionMode.LOCAL,
+          scanner: 'Local Process Engine',
+          status: ScanStatus.QUEUED,
+          projectId: dto.projectId,
+          targetId: dto.targetId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'The specified project or target does not exist',
+        );
+      }
+      throw error;
+    }
 
     // 4. Asynchronously launch local scanner job
     void this.executeLocalScanAsync(

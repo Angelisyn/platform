@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ScansService } from './scans.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LocalScannerService } from './local-scanner.service';
@@ -131,6 +132,52 @@ describe('ScansService', () => {
 
       await expect(service.createForUser('user-1', dto)).rejects.toThrow(
         ForbiddenException,
+      );
+    });
+  });
+
+  describe('Prisma P2003 error handling', () => {
+    it('should throw BadRequestException on P2003 during createForUser', async () => {
+      mockPrismaService.project.findFirst.mockResolvedValue(mockProject);
+      mockPrismaService.target.findFirst.mockResolvedValue(mockTarget);
+      mockPrismaService.scan.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'Port Scan Job',
+        targetId: 'target-1',
+        projectId: 'proj-1',
+        scanType: ScanType.PORT_SCAN,
+      };
+
+      await expect(service.createForUser('user-1', dto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should re-throw non-P2003 Prisma errors', async () => {
+      mockPrismaService.project.findFirst.mockResolvedValue(mockProject);
+      mockPrismaService.target.findFirst.mockResolvedValue(mockTarget);
+      mockPrismaService.scan.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed',
+          { code: 'P2002', clientVersion: '5.0.0' },
+        ),
+      );
+
+      const dto = {
+        name: 'Port Scan Job',
+        targetId: 'target-1',
+        projectId: 'proj-1',
+        scanType: ScanType.PORT_SCAN,
+      };
+
+      await expect(service.createForUser('user-1', dto)).rejects.toThrow(
+        Prisma.PrismaClientKnownRequestError,
       );
     });
   });

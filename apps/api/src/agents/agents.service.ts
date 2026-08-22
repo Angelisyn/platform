@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiKeysService } from '../api-keys/api-keys.service';
 import { ProviderAdapterService } from './providers/provider-adapter.service';
@@ -72,13 +73,25 @@ export class AgentsService {
       );
     }
 
-    return this.prisma.agent.create({
-      data: {
-        ...dto,
-        provider: canonicalProvider,
-        model: dto.model.trim(),
-      },
-    });
+    try {
+      return await this.prisma.agent.create({
+        data: {
+          ...dto,
+          provider: canonicalProvider,
+          model: dto.model.trim(),
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'The specified project does not exist',
+        );
+      }
+      throw error;
+    }
   }
 
   async updateForUser(id: string, userId: string, dto: UpdateAgentDto) {
@@ -116,22 +129,46 @@ export class AgentsService {
       }
     }
 
-    return this.prisma.agent.update({
-      where: { id },
-      data: {
-        ...dto,
-        ...(dto.provider ? { provider: targetProvider } : {}),
-        ...(dto.model ? { model: targetModel } : {}),
-      },
-    });
+    try {
+      return await this.prisma.agent.update({
+        where: { id },
+        data: {
+          ...dto,
+          ...(dto.provider ? { provider: targetProvider } : {}),
+          ...(dto.model ? { model: targetModel } : {}),
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'The specified project does not exist',
+        );
+      }
+      throw error;
+    }
   }
 
   async removeForUser(id: string, userId: string) {
     await this.findOneForUser(id, userId);
 
-    return this.prisma.agent.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.agent.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Cannot delete agent with dependent resources',
+        );
+      }
+      throw error;
+    }
   }
 
   async executeForUser(

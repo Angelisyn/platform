@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTargetDto } from './dto/create-target.dto';
 import { UpdateTargetDto } from './dto/update-target.dto';
@@ -73,14 +74,26 @@ export class TargetsService {
       throw new ForbiddenException('Project does not belong to user or does not exist');
     }
 
-    return this.prisma.target.create({
-      data: {
-        name: dto.name,
-        target: dto.target,
-        type: dto.type,
-        projectId: dto.projectId,
-      },
-    });
+    try {
+      return await this.prisma.target.create({
+        data: {
+          name: dto.name,
+          target: dto.target,
+          type: dto.type,
+          projectId: dto.projectId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'The specified project does not exist',
+        );
+      }
+      throw error;
+    }
   }
 
   async updateForUser(id: string, userId: string, dto: UpdateTargetDto) {
@@ -95,8 +108,20 @@ export class TargetsService {
   async removeForUser(id: string, userId: string) {
     await this.findOneForUser(id, userId);
 
-    return this.prisma.target.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.target.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Cannot delete target with dependent resources',
+        );
+      }
+      throw error;
+    }
   }
 }

@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ReportsService } from './reports.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -45,5 +47,55 @@ describe('ReportsService', () => {
     const res = await service.findAllForUser('u-1');
     expect(res).toHaveLength(1);
     expect(res[0].findingsSummary.high).toBe(2);
+  });
+
+  describe('Prisma P2003 error handling', () => {
+    it('should throw ForbiddenException when project does not belong to user', async () => {
+      mockPrismaService.project.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createForUser('u-1', {
+          name: 'Report',
+          projectId: 'p-missing',
+          targetId: 't-1',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException on P2003 during createForUser', async () => {
+      mockPrismaService.project.findFirst.mockResolvedValue({ name: 'Project 1' });
+      mockPrismaService.report.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          { code: 'P2003', clientVersion: '5.0.0' },
+        ),
+      );
+
+      await expect(
+        service.createForUser('u-1', {
+          name: 'Report',
+          projectId: 'p-1',
+          targetId: 't-missing',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should re-throw non-P2003 Prisma errors', async () => {
+      mockPrismaService.project.findFirst.mockResolvedValue({ name: 'Project 1' });
+      mockPrismaService.report.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed',
+          { code: 'P2002', clientVersion: '5.0.0' },
+        ),
+      );
+
+      await expect(
+        service.createForUser('u-1', {
+          name: 'Report',
+          projectId: 'p-1',
+          targetId: 't-1',
+        }),
+      ).rejects.toThrow(Prisma.PrismaClientKnownRequestError);
+    });
   });
 });

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
 import { isValidProvider } from '../common/providers/provider-registry';
@@ -74,22 +75,47 @@ export class ApiKeysService {
       throw new BadRequestException(`Unsupported provider '${dto.provider}'.`);
     }
     const encryptedKey = this.cryptoService.encrypt(dto.key);
-    const createdKey = await this.prisma.apiKey.create({
-      data: {
-        name: dto.name,
-        provider: canonicalProvider,
-        key: encryptedKey,
-        userId,
-      },
-    });
+    let createdKey;
+    try {
+      createdKey = await this.prisma.apiKey.create({
+        data: {
+          name: dto.name,
+          provider: canonicalProvider,
+          key: encryptedKey,
+          userId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'The specified user does not exist',
+        );
+      }
+      throw error;
+    }
     return this.sanitizeApiKey(createdKey);
   }
 
   async removeForUser(id: string, userId: string): Promise<ApiKeyResponseDto> {
     const existing = await this.findOneForUser(id, userId);
-    await this.prisma.apiKey.delete({
-      where: { id },
-    });
+    try {
+      await this.prisma.apiKey.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Cannot delete API key with dependent resources',
+        );
+      }
+      throw error;
+    }
     return existing;
   }
 
