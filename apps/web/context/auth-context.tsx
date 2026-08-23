@@ -9,6 +9,11 @@ import {
 } from 'react';
 
 import { authService } from '@/services/auth.service';
+import {
+  getStoredToken,
+  setStoredToken,
+  removeStoredToken,
+} from '@/lib/auth';
 
 import type {
   AuthContextValue,
@@ -34,7 +39,7 @@ export function AuthProvider({
   });
 
   const refreshUser = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
+    const token = getStoredToken();
 
     if (!token) {
       setState({
@@ -57,7 +62,7 @@ export function AuthProvider({
         isLoading: false,
       });
     } catch {
-      localStorage.removeItem('access_token');
+      removeStoredToken();
 
       setState({
         user: null,
@@ -80,16 +85,27 @@ export function AuthProvider({
   const login = async (credentials: LoginRequest) => {
     const response = await authService.login(credentials);
 
-    localStorage.setItem(
-      'access_token',
-      response.access_token,
-    );
+    setStoredToken(response.access_token);
 
-    await refreshUser();
+    setState({
+      user: response.user,
+      token: response.access_token,
+      isAuthenticated: true,
+      isLoading: false,
+    });
   };
 
   const register = async (data: RegisterRequest) => {
-    await authService.register(data);
+    const response = await authService.register(data);
+
+    setStoredToken(response.access_token);
+
+    setState({
+      user: response.user,
+      token: response.access_token,
+      isAuthenticated: true,
+      isLoading: false,
+    });
   };
 
   const logout = () => {

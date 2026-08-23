@@ -1,35 +1,51 @@
 import { apiRequest } from '@/lib/api';
+import { removeStoredToken } from '@/lib/auth';
 
 import type {
+  AuthResponse,
   LoginRequest,
-  LoginResponse,
   RegisterRequest,
   User,
 } from '@/types/auth';
 
 export class AuthService {
-  async register(data: RegisterRequest): Promise<User> {
-    return apiRequest<User, RegisterRequest>('/auth/register', {
+  /**
+   * Register a new user.
+   * Backend returns { access_token, user } on success.
+   */
+  async register(data: RegisterRequest): Promise<AuthResponse> {
+    return apiRequest<AuthResponse, RegisterRequest>('/auth/register', {
       method: 'POST',
       body: data,
     });
   }
 
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    return apiRequest<LoginResponse, LoginRequest>('/auth/login', {
+  /**
+   * Login with email and password.
+   * Backend returns { access_token, user } on success.
+   */
+  async login(data: LoginRequest): Promise<AuthResponse> {
+    return apiRequest<AuthResponse, LoginRequest>('/auth/login', {
       method: 'POST',
       body: data,
     });
   }
 
+  /**
+   * Fetch the current authenticated user via GET /auth/me.
+   * Requires a valid Bearer token.
+   */
   async getCurrentUser(token: string): Promise<User> {
     return apiRequest<User>('/auth/me', {
       token,
     });
   }
 
+  /**
+   * Clear the stored authentication token.
+   */
   logout(): void {
-    localStorage.removeItem('access_token');
+    removeStoredToken();
   }
 }
 
