@@ -1,5 +1,6 @@
 /**
  * Authentication request DTOs
+ * Matches backend: apps/api/src/auth/dto/login.dto.ts, register.dto.ts
  */
 
 export interface LoginRequest {
@@ -15,16 +16,27 @@ export interface RegisterRequest {
 
 /**
  * Authentication response DTOs
+ * Matches backend: apps/api/src/auth/auth.service.ts
+ *
+ * Both login() and register() return { access_token, user }.
  */
 
-export interface LoginResponse {
+export interface AuthResponse {
   access_token: string;
+  user: User;
 }
+
+/**
+ * User object returned by the backend.
+ * Matches backend: apps/api/src/auth/interfaces/authenticated-user.interface.ts
+ */
 
 export interface User {
   id: string;
-  name: string;
   email: string;
+  name: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuthState {
