@@ -1,5 +1,7 @@
 import { apiRequest } from '@/lib/api';
 import type { Target, CreateTargetRequest, UpdateTargetRequest } from '@/types/targets';
+import type { Scan } from '@/types/scans';
+import type { Finding } from '@/types/findings';
 
 export class TargetsService {
   private getToken(token?: string): string | undefined {
@@ -7,27 +9,33 @@ export class TargetsService {
   }
 
   async getAll(token?: string): Promise<Target[]> {
-    try {
-      return await apiRequest<Target[]>('/targets', { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Target[]>('/targets', {
+      token: this.getToken(token),
+    });
   }
 
-  async getById(id: string, token?: string): Promise<Target | null> {
-    try {
-      return await apiRequest<Target>(`/targets/${id}`, { token: this.getToken(token) });
-    } catch {
-      return null;
-    }
+  async getById(id: string, token?: string): Promise<Target> {
+    return apiRequest<Target>(`/targets/${id}`, {
+      token: this.getToken(token),
+    });
   }
 
   async getByProject(projectId: string, token?: string): Promise<Target[]> {
-    try {
-      return await apiRequest<Target[]>(`/projects/${projectId}/targets`, { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Target[]>(`/projects/${projectId}/targets`, {
+      token: this.getToken(token),
+    });
+  }
+
+  async getScans(targetId: string, token?: string): Promise<Scan[]> {
+    return apiRequest<Scan[]>(`/targets/${targetId}/scans`, {
+      token: this.getToken(token),
+    });
+  }
+
+  async getFindings(targetId: string, token?: string): Promise<Finding[]> {
+    return apiRequest<Finding[]>(`/targets/${targetId}/findings`, {
+      token: this.getToken(token),
+    });
   }
 
   async create(data: CreateTargetRequest, token?: string): Promise<Target> {
@@ -46,8 +54,8 @@ export class TargetsService {
     });
   }
 
-  async delete(id: string, token?: string): Promise<void> {
-    await apiRequest<void>(`/targets/${id}`, {
+  async delete(id: string, token?: string): Promise<Target> {
+    return apiRequest<Target>(`/targets/${id}`, {
       method: 'DELETE',
       token: this.getToken(token),
     });

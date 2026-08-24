@@ -6,9 +6,12 @@ export interface Target {
   name: string;
   target: string;
   type: TargetType;
-  projectId: string;
-  projectName?: string;
   status: TargetStatus;
+  projectId: string;
+  project?: {
+    name: string;
+  };
+  projectName?: string;
   createdAt: string;
   updatedAt?: string;
 }
