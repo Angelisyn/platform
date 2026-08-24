@@ -7,35 +7,19 @@ export class FindingsService {
   }
 
   async getAll(token?: string): Promise<Finding[]> {
-    try {
-      return await apiRequest<Finding[]>('/findings', { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Finding[]>('/findings', { token: this.getToken(token) });
   }
 
-  async getById(id: string, token?: string): Promise<Finding | null> {
-    try {
-      return await apiRequest<Finding>(`/findings/${id}`, { token: this.getToken(token) });
-    } catch {
-      return null;
-    }
+  async getById(id: string, token?: string): Promise<Finding> {
+    return apiRequest<Finding>(`/findings/${id}`, { token: this.getToken(token) });
   }
 
   async getByScan(scanId: string, token?: string): Promise<Finding[]> {
-    try {
-      return await apiRequest<Finding[]>(`/scans/${scanId}/findings`, { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Finding[]>(`/scans/${scanId}/findings`, { token: this.getToken(token) });
   }
 
   async getByTarget(targetId: string, token?: string): Promise<Finding[]> {
-    try {
-      return await apiRequest<Finding[]>(`/targets/${targetId}/findings`, { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Finding[]>(`/targets/${targetId}/findings`, { token: this.getToken(token) });
   }
 }
 
