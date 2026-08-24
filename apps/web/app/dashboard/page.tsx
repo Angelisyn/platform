@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Badge, Button, Card, Heading, Spinner } from '@angelisyn/ui';
+import { Alert, Badge, Button, Card, Spinner } from '@angelisyn/ui';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/services/projects.service';
 import { targetsService } from '@/services/targets.service';
@@ -70,27 +71,23 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Heading>Security Overview</Heading>
-            <Badge>Local Execution Mode</Badge>
+      <PageHeader
+        title="Security Overview"
+        description={`Welcome back, ${user?.name ?? 'Security Analyst'} (${user?.email ?? 'user@angelisyn.local'}). Here is your live assessment status.`}
+        badge={<Badge>Local Execution Mode</Badge>}
+        actions={
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard/targets">
+              <Button>+ Add Target</Button>
+            </Link>
+            <Link href="/dashboard/scans/new">
+              <button className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-colors shadow-sm shadow-emerald-600/20">
+                + New Scan
+              </button>
+            </Link>
           </div>
-          <p className="mt-1 text-sm text-slate-400">
-            Welcome back, <span className="font-semibold text-slate-200">{user?.name ?? 'Security Analyst'}</span> ({user?.email})
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/targets">
-            <Button>+ Add Target</Button>
-          </Link>
-          <Link href="/dashboard/scans/new">
-            <button className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-base transition-colors">
-              + New Scan
-            </button>
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {error && <Alert>{error}</Alert>}
 
