@@ -7,19 +7,11 @@ export class ReportsService {
   }
 
   async getAll(token?: string): Promise<Report[]> {
-    try {
-      return await apiRequest<Report[]>('/reports', { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Report[]>('/reports', { token: this.getToken(token) });
   }
 
-  async getById(id: string, token?: string): Promise<Report | null> {
-    try {
-      return await apiRequest<Report>(`/reports/${id}`, { token: this.getToken(token) });
-    } catch {
-      return null;
-    }
+  async getById(id: string, token?: string): Promise<Report> {
+    return apiRequest<Report>(`/reports/${id}`, { token: this.getToken(token) });
   }
 
   async create(data: CreateReportRequest, token?: string): Promise<Report> {
