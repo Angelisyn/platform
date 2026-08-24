@@ -1,12 +1,46 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Badge, Button, Card, Heading, Spinner } from '@angelisyn/ui';
+import { Alert, Badge, Button, Card, Spinner } from '@angelisyn/ui';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { scansService } from '@/services/scans.service';
 import { findingsService } from '@/services/findings.service';
-import type { Scan } from '@/types/scans';
+import { isApiError } from '@/lib/api';
+import type { Scan, ScanStatus } from '@/types/scans';
 import type { Finding } from '@/types/findings';
+
+const POLL_INTERVAL_MS = 3000;
+const TERMINAL_STATUSES: ReadonlySet<ScanStatus> = new Set(['COMPLETED', 'FAILED']);
+
+function statusBadgeClass(status: ScanStatus) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'bg-emerald-950 text-emerald-300 border border-emerald-800';
+    case 'RUNNING':
+      return 'bg-blue-950 text-blue-300 border border-blue-800 animate-pulse';
+    case 'FAILED':
+      return 'bg-red-950 text-red-300 border border-red-800';
+    case 'QUEUED':
+    default:
+      return 'bg-slate-800 text-slate-400';
+  }
+}
+
+function statusLabel(status: ScanStatus) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'COMPLETED';
+    case 'RUNNING':
+      return 'RUNNING';
+    case 'FAILED':
+      return 'FAILED';
+    case 'QUEUED':
+      return 'QUEUED';
+    default:
+      return status;
+  }
+}
 
 export default function ScanDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -14,10 +48,54 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'RAW_OUTPUT' | 'FINDINGS'>('OVERVIEW');
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isMountedRef = useRef(true);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current !== null) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback(
+    (scanId: string) => {
+      stopPolling();
+      pollTimerRef.current = setInterval(async () => {
+        if (!isMountedRef.current) {
+          stopPolling();
+          return;
+        }
+        try {
+          const updated = await scansService.getById(scanId);
+          if (!isMountedRef.current) return;
+          if (updated) {
+            setScan(updated);
+            if (TERMINAL_STATUSES.has(updated.status)) {
+              stopPolling();
+              // Fetch findings on terminal state
+              const updatedFindings = await findingsService.getByScan(scanId);
+              if (isMountedRef.current) {
+                setFindings(updatedFindings);
+              }
+            }
+          } else {
+            stopPolling();
+          }
+        } catch {
+          // Network error during polling — stop to avoid spamming
+          stopPolling();
+        }
+      }, POLL_INTERVAL_MS);
+    },
+    [stopPolling],
+  );
 
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
 
     async function loadScanDetails() {
       try {
@@ -28,33 +106,69 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
           findingsService.getByScan(id),
         ]);
 
-        if (isMounted) {
-          setScan(scanData);
-          setFindings(findingsData);
+        if (!isMountedRef.current) return;
+
+        setScan(scanData);
+        setFindings(findingsData);
+
+        if (scanData && !TERMINAL_STATUSES.has(scanData.status)) {
+          startPolling(id);
         }
       } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load scan job details');
+        if (isMountedRef.current) {
+          if (isApiError(err)) {
+            setError(err.message);
+          } else {
+            setError(err instanceof Error ? err.message : 'Failed to load scan details');
+          }
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMountedRef.current) setLoading(false);
       }
     }
 
     void loadScanDetails();
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
+      stopPolling();
     };
-  }, [id]);
+  }, [id, startPolling, stopPolling]);
+
+  const handleCancel = async () => {
+    if (!scan) return;
+    try {
+      setCancelling(true);
+      setCancelError(null);
+      await scansService.cancel(scan.id);
+      // Immediately refresh scan data
+      const updated = await scansService.getById(scan.id);
+      if (isMountedRef.current && updated) {
+        setScan(updated);
+        stopPolling();
+        const updatedFindings = await findingsService.getByScan(scan.id);
+        if (isMountedRef.current) {
+          setFindings(updatedFindings);
+        }
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        if (isApiError(err)) {
+          setCancelError(err.message);
+        } else {
+          setCancelError(err instanceof Error ? err.message : 'Failed to cancel scan');
+        }
+      }
+    } finally {
+      if (isMountedRef.current) setCancelling(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center gap-3">
         <Spinner />
-        <span className="text-slate-400">Loading scan execution details...</span>
+        <span className="text-slate-400">Loading scan details...</span>
       </div>
     );
   }
@@ -62,7 +176,15 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
   if (error || !scan) {
     return (
       <div className="space-y-4">
-        <Alert>{error || 'Scan job not found'}</Alert>
+        <PageHeader
+          title="Scan Detail"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Scans', href: '/dashboard/scans' },
+            { label: 'Detail' },
+          ]}
+        />
+        <Alert>{error || 'Scan not found'}</Alert>
         <Link href="/dashboard/scans">
           <Button>&larr; Back to Scans</Button>
         </Link>
@@ -70,8 +192,12 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
+  const isRunning = scan.status === 'RUNNING' || scan.status === 'QUEUED';
+  const canCancel = scan.status === 'QUEUED' || scan.status === 'RUNNING';
+
+  // Build the execution lifecycle stepper steps
   const steps = ['QUEUED', 'RUNNING', scan.status === 'FAILED' ? 'FAILED' : 'COMPLETED'];
-  const getStepIndex = (status: string) => {
+  const getStepIndex = (status: ScanStatus) => {
     if (status === 'QUEUED') return 0;
     if (status === 'RUNNING') return 1;
     return 2;
@@ -80,36 +206,48 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <PageHeader
+        title={scan.name}
+        description={`Scan ID: ${scan.id} \u2022 Engine: ${scan.scanner}`}
+        badge={<Badge>{scan.executionMode}</Badge>}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Scans', href: '/dashboard/scans' },
+          { label: scan.name },
+        ]}
+        actions={
           <div className="flex items-center gap-3">
-            <Heading>{scan.name}</Heading>
-            <Badge>{scan.executionMode}</Badge>
-            <span
-              className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                scan.status === 'COMPLETED'
-                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                  : scan.status === 'RUNNING'
-                  ? 'bg-blue-950 text-blue-300 border border-blue-800 animate-pulse'
-                  : scan.status === 'FAILED'
-                  ? 'bg-red-950 text-red-300 border border-red-800'
-                  : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              {scan.status}
-            </span>
+            {canCancel && (
+              <button
+                onClick={() => void handleCancel()}
+                disabled={cancelling}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium text-sm disabled:opacity-50 transition-colors"
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel Scan'}
+              </button>
+            )}
+            <Link href="/dashboard/scans">
+              <button className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium text-sm transition-colors">
+                &larr; Back to Scans
+              </button>
+            </Link>
           </div>
-          <p className="mt-1 text-sm text-slate-400">
-            Scan ID: <span className="font-mono text-slate-300">{scan.id}</span> &bull; Engine: <strong className="text-slate-200">{scan.scanner}</strong>
-          </p>
+        }
+      >
+        {/* Status badge inline with header */}
+        <div className="flex items-center gap-3">
+          <span className={`text-xs px-3 py-1 rounded-full font-semibold ${statusBadgeClass(scan.status)}`}>
+            {statusLabel(scan.status)}
+          </span>
+          {isRunning && (
+            <span className="text-xs text-blue-400 animate-pulse">
+              Polling for updates...
+            </span>
+          )}
         </div>
+      </PageHeader>
 
-        <Link href="/dashboard/scans">
-          <button className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium text-sm">
-            &larr; Back to Scans
-          </button>
-        </Link>
-      </div>
+      {cancelError && <Alert>{cancelError}</Alert>}
 
       {/* Visual Execution Lifecycle Stepper */}
       <Card>
@@ -120,7 +258,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
           <div className="flex items-center justify-between max-w-xl mx-auto">
             {steps.map((stepName, idx) => {
               const isDone = idx < currentStepIdx || scan.status === 'COMPLETED';
-              const isCurrent = idx === currentStepIdx && scan.status !== 'COMPLETED';
+              const isCurrent = idx === currentStepIdx && !TERMINAL_STATUSES.has(scan.status);
               const isFailed = stepName === 'FAILED' && scan.status === 'FAILED';
 
               return (
@@ -131,10 +269,10 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
                         isFailed
                           ? 'bg-red-600 text-white'
                           : isDone
-                          ? 'bg-emerald-600 text-white'
-                          : isCurrent
-                          ? 'bg-blue-600 text-white ring-4 ring-blue-900/50 animate-pulse'
-                          : 'bg-slate-800 text-slate-500'
+                            ? 'bg-emerald-600 text-white'
+                            : isCurrent
+                              ? 'bg-blue-600 text-white ring-4 ring-blue-900/50 animate-pulse'
+                              : 'bg-slate-800 text-slate-500'
                       }`}
                     >
                       {idx + 1}
@@ -165,7 +303,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
-          Overview & Metadata
+          Overview
         </button>
         <button
           onClick={() => setActiveTab('FINDINGS')}
@@ -175,7 +313,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
-          Detected Findings ({findings.length})
+          Findings ({findings.length})
         </button>
         <button
           onClick={() => setActiveTab('RAW_OUTPUT')}
@@ -185,30 +323,63 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
-          Raw Process Output
+          Raw Output
         </button>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'OVERVIEW' && (
         <Card>
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <p className="text-xs text-slate-500 uppercase font-semibold">Assessment Type</p>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Scan Type</p>
               <p className="text-sm font-medium text-slate-200 mt-1">{scan.scanType}</p>
             </div>
             <div>
               <p className="text-xs text-slate-500 uppercase font-semibold">Execution Mode</p>
-              <p className="text-sm font-medium text-emerald-400 mt-1">{scan.executionMode} (Local Node process)</p>
+              <p className="text-sm font-medium text-emerald-400 mt-1">{scan.executionMode}</p>
             </div>
             <div>
               <p className="text-xs text-slate-500 uppercase font-semibold">Target</p>
-              <p className="text-sm font-mono text-blue-400 mt-1">{scan.targetValue || scan.targetId}</p>
+              <p className="text-sm font-mono text-blue-400 mt-1 truncate" title={scan.targetValue || scan.targetId}>
+                {scan.targetName && <span className="font-sans text-slate-200">{scan.targetName} — </span>}
+                {scan.targetValue || scan.targetId}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 uppercase font-semibold">Started Timestamp</p>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Project</p>
+              <p className="text-sm font-medium text-slate-200 mt-1">{scan.projectName || scan.projectId}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Findings</p>
+              <p className="text-sm font-medium text-slate-200 mt-1">{scan.findingsCount}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Created</p>
+              <p className="text-sm font-medium text-slate-200 mt-1">
+                {new Date(scan.createdAt).toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Started At</p>
               <p className="text-sm font-medium text-slate-200 mt-1">
                 {scan.startedAt ? new Date(scan.startedAt).toLocaleString() : 'Not started'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Completed At</p>
+              <p className="text-sm font-medium text-slate-200 mt-1">
+                {scan.completedAt ? new Date(scan.completedAt).toLocaleString() : 'In progress...'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Duration</p>
+              <p className="text-sm font-medium text-slate-200 mt-1">
+                {scan.startedAt && scan.completedAt
+                  ? `${Math.round((new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime()) / 1000)}s`
+                  : scan.startedAt
+                    ? 'In progress...'
+                    : '—'}
               </p>
             </div>
           </div>
@@ -218,11 +389,13 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
       {activeTab === 'FINDINGS' && (
         <div className="space-y-3">
           {findings.length === 0 ? (
-            <Card>
-              <div className="p-8 text-center text-slate-400">
-                No vulnerabilities or security findings reported for this scan.
-              </div>
-            </Card>
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-8 text-center text-slate-400">
+              <p className="text-sm">
+                {scan.status === 'COMPLETED'
+                  ? 'No findings reported for this scan.'
+                  : 'Findings will appear here after scan completion.'}
+              </p>
+            </div>
           ) : (
             findings.map((f) => (
               <Card key={f.id}>
@@ -245,7 +418,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
         <Card>
           <div className="p-6 space-y-3">
             <h3 className="text-sm font-semibold uppercase text-slate-400 tracking-wider">
-              Local Process Stdout / Stderr Stream
+              Raw Process Output
             </h3>
             {scan.rawOutput ? (
               <pre className="p-4 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap">
@@ -253,9 +426,25 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
               </pre>
             ) : (
               <div className="p-8 text-center text-slate-500 text-sm italic">
-                Raw stdout log stream will populate when local executor finishes process run.
+                {scan.status === 'RUNNING' || scan.status === 'QUEUED'
+                  ? 'Output will appear when the scan completes...'
+                  : 'No raw output available for this scan.'}
               </div>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* Error Details (shown when scan failed) */}
+      {scan.status === 'FAILED' && scan.errorDetails && (
+        <Card>
+          <div className="p-6 space-y-3">
+            <h3 className="text-sm font-semibold uppercase text-red-400 tracking-wider">
+              Error Details
+            </h3>
+            <pre className="p-4 rounded-lg bg-red-950/40 border border-red-800/60 text-xs font-mono text-red-300 overflow-x-auto whitespace-pre-wrap">
+              {scan.errorDetails}
+            </pre>
           </div>
         </Card>
       )}
