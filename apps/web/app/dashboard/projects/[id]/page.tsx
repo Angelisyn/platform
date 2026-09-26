@@ -8,12 +8,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Badge, Button, Card, Input, Spinner } from '@angelisyn/ui';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { projectsService } from '@/services/projects.service';
+import { targetsService } from '@/services/targets.service';
 import { isApiError } from '@/lib/api';
 import {
   updateProjectSchema,
   type UpdateProjectFormValues,
 } from '@/lib/validator/projects';
 import type { Project } from '@/types/projects';
+import type { Target } from '@/types/targets';
 
 interface ProjectDetailPageProps {
   params: Promise<{ id: string }>;
@@ -33,9 +35,35 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
 
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [targetsLoading, setTargetsLoading] = useState(true);
+  const [targetsError, setTargetsError] = useState<string | null>(null);
+
   const editForm = useForm<UpdateProjectFormValues>({
     resolver: zodResolver(updateProjectSchema),
   });
+
+  const fetchTargets = useCallback(async (projectId: string) => {
+    try {
+      setTargetsError(null);
+      const data = await targetsService.getByProject(projectId);
+      setTargets(data);
+    } catch (err) {
+      setTargets([]);
+      if (isApiError(err)) {
+        setTargetsError(err.message);
+      } else {
+        setTargetsError(err instanceof Error ? err.message : 'Failed to load targets');
+      }
+    } finally {
+      setTargetsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setTargetsLoading(true);
+    void fetchTargets(id);
+  }, [id, fetchTargets]);
 
   const fetchProject = useCallback(async (projectId: string) => {
     try {
@@ -410,6 +438,84 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
             </dl>
           </div>
         </Card>
+      </div>
+
+      {/* Targets in this Project */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">Targets ({targets.length})</h2>
+          <div className="flex items-center gap-4 text-xs">
+            <Link
+              href={`/dashboard/targets?projectId=${project.id}`}
+              className="text-blue-400 hover:underline font-medium"
+            >
+              + Create Target
+            </Link>
+            <Link href="/dashboard/targets" className="text-slate-400 hover:text-white underline">
+              View Targets
+            </Link>
+          </div>
+        </div>
+
+        {targetsLoading ? (
+          <div className="flex h-32 items-center justify-center gap-3">
+            <Spinner />
+            <span className="text-slate-400">Loading targets...</span>
+          </div>
+        ) : targetsError ? (
+          <div className="rounded-xl border border-red-900/60 bg-red-950/30 p-8 text-center space-y-4">
+            <p className="text-sm font-semibold text-white">Failed to load targets</p>
+            <p className="text-sm text-red-300">{targetsError}</p>
+            <button
+              onClick={() => {
+                setTargetsLoading(true);
+                void fetchTargets(id);
+              }}
+              className="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 font-medium text-sm transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        ) : targets.length === 0 ? (
+          <Card>
+            <div className="p-8 text-center text-slate-400 space-y-3">
+              <p className="text-sm">No targets have been added to this project yet.</p>
+              <Link href={`/dashboard/targets?projectId=${project.id}`}>
+                <Button>Add First Target</Button>
+              </Link>
+            </div>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {targets.map((target) => (
+              <Card key={target.id}>
+                <div className="p-4 flex items-center justify-between">
+                  <div>
+                    <Link
+                      href={`/dashboard/targets/${target.id}`}
+                      className="font-semibold text-white hover:text-blue-400 transition-colors"
+                    >
+                      {target.name}
+                    </Link>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      <span className="font-mono text-blue-400">{target.target}</span> &bull; Type:{' '}
+                      {target.type}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded font-medium ${
+                      target.status === 'ACTIVE'
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-400/30'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {target.status}
+                  </span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

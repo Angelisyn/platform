@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Badge, Card, Heading, Input, Spinner } from '@angelisyn/ui';
+import { Badge, Card, Heading, Input, Spinner } from '@angelisyn/ui';
 import { findingsService } from '@/services/findings.service';
+import { isApiError } from '@/lib/api';
 import type { Finding, FindingSeverity } from '@/types/findings';
 
 export default function FindingsPage() {
@@ -13,22 +14,26 @@ export default function FindingsPage() {
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState<FindingSeverity | 'ALL'>('ALL');
 
-  useEffect(() => {
-    async function loadFindings() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await findingsService.getAll();
-        setFindings(data);
-      } catch (err) {
+  const fetchFindings = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await findingsService.getAll();
+      setFindings(data);
+    } catch (err) {
+      setFindings([]);
+      if (isApiError(err)) {
+        setError(err.message);
+      } else {
         setError(err instanceof Error ? err.message : 'Failed to load findings');
-      } finally {
-        setLoading(false);
       }
+    } finally {
+      setLoading(false);
     }
-
-    void loadFindings();
   }, []);
+
+  useEffect(() => {
+    void fetchFindings();
+  }, [fetchFindings]);
 
   const filteredFindings = findings.filter((f) => {
     const matchesSearch =
@@ -65,8 +70,6 @@ export default function FindingsPage() {
         </p>
       </div>
 
-      {error && <Alert>{error}</Alert>}
-
       {/* Toolbar & Filters */}
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="w-full sm:w-80">
@@ -98,6 +101,20 @@ export default function FindingsPage() {
         <div className="flex h-48 items-center justify-center gap-3">
           <Spinner />
           <span className="text-slate-400">Loading vulnerabilities...</span>
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-red-900/60 bg-red-950/30 p-12 text-center space-y-4">
+          <p className="text-lg font-semibold text-white">Failed to load findings</p>
+          <p className="text-sm text-red-300 max-w-md mx-auto">{error}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              void fetchFindings();
+            }}
+            className="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 font-medium text-sm transition-colors"
+          >
+            Retry
+          </button>
         </div>
       ) : filteredFindings.length === 0 ? (
         <Card>
