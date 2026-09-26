@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Badge, Button, Card, Input, Spinner } from '@angelisyn/ui';
@@ -18,7 +19,9 @@ import {
 import type { Target } from '@/types/targets';
 import type { Project } from '@/types/projects';
 
-export default function TargetsPage() {
+function TargetsPageContent() {
+  const searchParams = useSearchParams();
+  const preselectedProjectId = searchParams.get('projectId') || '';
   const [targets, setTargets] = useState<Target[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +216,9 @@ export default function TargetsPage() {
                 name: '',
                 target: '',
                 type: 'IP_ADDRESS',
-                projectId: projects.length > 0 ? projects[0].id : '',
+                projectId: preselectedProjectId && projects.some((p) => p.id === preselectedProjectId)
+                  ? preselectedProjectId
+                  : projects.length > 0 ? projects[0].id : '',
               });
             }}
           >
@@ -650,5 +655,20 @@ export default function TargetsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TargetsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center gap-3">
+          <Spinner />
+          <span className="text-slate-400">Loading targets...</span>
+        </div>
+      }
+    >
+      <TargetsPageContent />
+    </Suspense>
   );
 }

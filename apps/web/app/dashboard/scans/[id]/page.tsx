@@ -54,8 +54,23 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'RAW_OUTPUT' | 'FINDINGS'>('OVERVIEW');
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
+  // Monotonic generation for state-writing requests: any newer request,
+  // cancellation, stop, or unmount invalidates older in-flight responses.
+  const requestSeqRef = useRef(0);
+
+  const beginRequest = useCallback(() => {
+    requestSeqRef.current += 1;
+    return requestSeqRef.current;
+  }, []);
+
+  const isCurrentRequest = useCallback(
+    (seq: number) => isMountedRef.current && seq === requestSeqRef.current,
+    [],
+  );
 
   const stopPolling = useCallback(() => {
+    // Invalidate any in-flight poll response so it cannot overwrite newer state.
+    requestSeqRef.current += 1;
     if (pollTimerRef.current !== null) {
       clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
@@ -70,16 +85,22 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
           stopPolling();
           return;
         }
+        const seq = beginRequest();
         try {
           const updated = await scansService.getById(scanId);
-          if (!isMountedRef.current) return;
+          if (!isCurrentRequest(seq)) return;
           setScan(updated);
           if (TERMINAL_STATUSES.has(updated.status)) {
             stopPolling();
             // Fetch findings on terminal state
-            const updatedFindings = await findingsService.getByScan(scanId);
-            if (isMountedRef.current) {
-              setFindings(updatedFindings);
+            const findingsSeq = beginRequest();
+            try {
+              const updatedFindings = await findingsService.getByScan(scanId);
+              if (isCurrentRequest(findingsSeq)) {
+                setFindings(updatedFindings);
+              }
+            } catch {
+              // Findings refresh failure after terminal state — keep existing list
             }
           }
         } catch {
@@ -88,10 +109,11 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
         }
       }, POLL_INTERVAL_MS);
     },
-    [stopPolling],
+    [beginRequest, isCurrentRequest, stopPolling],
   );
 
   const loadScanDetails = useCallback(async () => {
+    const seq = beginRequest();
     try {
       setLoading(true);
       setError(null);
@@ -101,16 +123,19 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
         findingsService.getByScan(id),
       ]);
 
-      if (!isMountedRef.current) return;
+      if (!isCurrentRequest(seq)) return;
 
       setScan(scanData);
       setFindings(findingsData);
+      setLoading(false);
 
+      // NOTE: startPolling() bumps the request generation (via stopPolling),
+      // so the loading state must be resolved before it is called.
       if (!TERMINAL_STATUSES.has(scanData.status)) {
         startPolling(id);
       }
     } catch (err) {
-      if (isMountedRef.current) {
+      if (isCurrentRequest(seq)) {
         if (isApiError(err) && err.isNotFound) {
           setNotFound(true);
         } else if (isApiError(err)) {
@@ -118,11 +143,10 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
         } else {
           setError(err instanceof Error ? err.message : 'Failed to load scan details');
         }
+        setLoading(false);
       }
-    } finally {
-      if (isMountedRef.current) setLoading(false);
     }
-  }, [id, startPolling]);
+  }, [beginRequest, id, isCurrentRequest, startPolling]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -141,13 +165,16 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
       setCancelling(true);
       setCancelError(null);
       await scansService.cancel(scan.id);
-      // Immediately refresh scan data
+      // Stop polling first: this invalidates any in-flight poll response.
+      stopPolling();
+      // Immediately refresh scan data (newest request wins)
+      const seq = beginRequest();
       const updated = await scansService.getById(scan.id);
-      if (isMountedRef.current) {
+      if (isCurrentRequest(seq)) {
         setScan(updated);
-        stopPolling();
+        const findingsSeq = beginRequest();
         const updatedFindings = await findingsService.getByScan(scan.id);
-        if (isMountedRef.current) {
+        if (isCurrentRequest(findingsSeq)) {
           setFindings(updatedFindings);
         }
       }
@@ -428,9 +455,11 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
           {findings.length === 0 ? (
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-8 text-center text-slate-400">
               <p className="text-sm">
-                {scan.status === 'COMPLETED'
-                  ? 'No findings reported for this scan.'
-                  : 'Findings will appear here after scan completion.'}
+                {scan.status === 'FAILED'
+                  ? 'This scan failed before completion, so no findings were generated.'
+                  : scan.status === 'COMPLETED'
+                    ? 'No findings reported for this scan.'
+                    : 'Findings will appear here after scan completion.'}
               </p>
             </div>
           ) : (
