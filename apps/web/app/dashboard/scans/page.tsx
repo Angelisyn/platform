@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Badge, Button, Card, Input, Spinner } from '@angelisyn/ui';
+import { Badge, Button, Card, Input, Spinner } from '@angelisyn/ui';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { scansService } from '@/services/scans.service';
 import { isApiError } from '@/lib/api';
@@ -21,6 +21,7 @@ export default function ScansPage() {
       const data = await scansService.getAll();
       setScans(data);
     } catch (err) {
+      setScans([]);
       if (isApiError(err)) {
         setError(err.message);
       } else {
@@ -32,33 +33,8 @@ export default function ScansPage() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function initialLoad() {
-      try {
-        const data = await scansService.getAll();
-        if (isMounted) setScans(data);
-      } catch (err) {
-        if (isMounted) {
-          setError(
-            isApiError(err)
-              ? err.message
-              : err instanceof Error
-                ? err.message
-                : 'Failed to load scans',
-          );
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    void initialLoad();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    void fetchScans();
+  }, [fetchScans]);
 
   const filteredScans = scans.filter((s) => {
     const matchesSearch =
@@ -102,23 +78,6 @@ export default function ScansPage() {
         }
       />
 
-      {error && (
-        <Alert>
-          <div className="flex items-center justify-between">
-            <span>{error}</span>
-            <button
-              onClick={() => {
-                setLoading(true);
-                void fetchScans();
-              }}
-              className="ml-4 underline text-xs hover:text-white"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
-      )}
-
       {/* Search & Filter Toolbar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
@@ -148,6 +107,20 @@ export default function ScansPage() {
         <div className="flex h-64 items-center justify-center gap-3">
           <Spinner />
           <span className="text-slate-400">Loading scans...</span>
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-red-900/60 bg-red-950/30 p-12 text-center space-y-4">
+          <p className="text-lg font-semibold text-white">Failed to load scans</p>
+          <p className="text-sm text-red-300 max-w-md mx-auto">{error}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              void fetchScans();
+            }}
+            className="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 font-medium text-sm transition-colors"
+          >
+            Retry
+          </button>
         </div>
       ) : filteredScans.length === 0 ? (
         <div className="rounded-xl border border-slate-800 bg-slate-950 p-12 text-center text-slate-400 space-y-4">

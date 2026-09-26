@@ -6,27 +6,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@angelisyn/config": "workspace:*",
+    "@angelisyn/types": "workspace:*",
+    "@angelisyn/ui": "workspace:*",
+    "@hookform/resolvers": "5.7.1",
     "next": "16.2.12",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "@angelisyn/ui": "workspace:*",
-"@angelisyn/types": "workspace:*",
-"@angelisyn/config": "workspace:*",
     "react-hook-form": "7.85.0",
-    "@hookform/resolvers": "5.7.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
+    "jsdom": "^30.1.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.1"
   }
 }
