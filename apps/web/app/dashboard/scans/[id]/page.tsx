@@ -48,6 +48,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'RAW_OUTPUT' | 'FINDINGS'>('OVERVIEW');
@@ -72,18 +73,14 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
         try {
           const updated = await scansService.getById(scanId);
           if (!isMountedRef.current) return;
-          if (updated) {
-            setScan(updated);
-            if (TERMINAL_STATUSES.has(updated.status)) {
-              stopPolling();
-              // Fetch findings on terminal state
-              const updatedFindings = await findingsService.getByScan(scanId);
-              if (isMountedRef.current) {
-                setFindings(updatedFindings);
-              }
-            }
-          } else {
+          setScan(updated);
+          if (TERMINAL_STATUSES.has(updated.status)) {
             stopPolling();
+            // Fetch findings on terminal state
+            const updatedFindings = await findingsService.getByScan(scanId);
+            if (isMountedRef.current) {
+              setFindings(updatedFindings);
+            }
           }
         } catch {
           // Network error during polling — stop to avoid spamming
@@ -94,38 +91,41 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
     [stopPolling],
   );
 
+  const loadScanDetails = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setNotFound(false);
+      const [scanData, findingsData] = await Promise.all([
+        scansService.getById(id),
+        findingsService.getByScan(id),
+      ]);
+
+      if (!isMountedRef.current) return;
+
+      setScan(scanData);
+      setFindings(findingsData);
+
+      if (!TERMINAL_STATUSES.has(scanData.status)) {
+        startPolling(id);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        if (isApiError(err) && err.isNotFound) {
+          setNotFound(true);
+        } else if (isApiError(err)) {
+          setError(err.message);
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to load scan details');
+        }
+      }
+    } finally {
+      if (isMountedRef.current) setLoading(false);
+    }
+  }, [id, startPolling]);
+
   useEffect(() => {
     isMountedRef.current = true;
-
-    async function loadScanDetails() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [scanData, findingsData] = await Promise.all([
-          scansService.getById(id),
-          findingsService.getByScan(id),
-        ]);
-
-        if (!isMountedRef.current) return;
-
-        setScan(scanData);
-        setFindings(findingsData);
-
-        if (scanData && !TERMINAL_STATUSES.has(scanData.status)) {
-          startPolling(id);
-        }
-      } catch (err) {
-        if (isMountedRef.current) {
-          if (isApiError(err)) {
-            setError(err.message);
-          } else {
-            setError(err instanceof Error ? err.message : 'Failed to load scan details');
-          }
-        }
-      } finally {
-        if (isMountedRef.current) setLoading(false);
-      }
-    }
 
     void loadScanDetails();
 
@@ -133,7 +133,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
       isMountedRef.current = false;
       stopPolling();
     };
-  }, [id, startPolling, stopPolling]);
+  }, [loadScanDetails, stopPolling]);
 
   const handleCancel = async () => {
     if (!scan) return;
@@ -143,7 +143,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
       await scansService.cancel(scan.id);
       // Immediately refresh scan data
       const updated = await scansService.getById(scan.id);
-      if (isMountedRef.current && updated) {
+      if (isMountedRef.current) {
         setScan(updated);
         stopPolling();
         const updatedFindings = await findingsService.getByScan(scan.id);
@@ -173,6 +173,30 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
+  if (notFound) {
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          title="Scan Not Found"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Scans', href: '/dashboard/scans' },
+            { label: 'Not Found' },
+          ]}
+        />
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-12 text-center text-slate-400 space-y-4">
+          <p className="text-lg font-semibold text-white">Scan Not Found</p>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            The scan you are looking for does not exist or you do not have permission to access it.
+          </p>
+          <Link href="/dashboard/scans">
+            <Button>&larr; Back to Scans</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !scan) {
     return (
       <div className="space-y-4">
@@ -184,7 +208,20 @@ export default function ScanDetailPage({ params }: { params: Promise<{ id: strin
             { label: 'Detail' },
           ]}
         />
-        <Alert>{error || 'Scan not found'}</Alert>
+        <Alert>
+          <div className="flex items-center justify-between">
+            <span>{error || 'Failed to load scan details'}</span>
+            <button
+              onClick={() => {
+                setLoading(true);
+                void loadScanDetails();
+              }}
+              className="ml-4 underline text-xs hover:text-white"
+            >
+              Retry
+            </button>
+          </div>
+        </Alert>
         <Link href="/dashboard/scans">
           <Button>&larr; Back to Scans</Button>
         </Link>

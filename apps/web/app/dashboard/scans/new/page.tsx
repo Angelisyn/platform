@@ -22,6 +22,41 @@ const SCAN_TYPE_OPTIONS = [
   { value: 'WEB_ASSESSMENT', label: 'Web Security Audit (HTTP headers / TLS checks)' },
 ] as const;
 
+type LaunchErrorKind = 'network' | 'validation' | 'api';
+
+interface LaunchError {
+  kind: LaunchErrorKind;
+  message: string;
+}
+
+/**
+ * Classifies scan-creation failures so the UI can distinguish a network
+ * failure from a backend validation rejection and a generic API error.
+ */
+function classifyLaunchError(err: unknown): LaunchError {
+  if (isApiError(err)) {
+    if (err.status === 0) {
+      return { kind: 'network', message: err.message };
+    }
+    if (err.isValidationError) {
+      return { kind: 'validation', message: err.message };
+    }
+    return { kind: 'api', message: err.message };
+  }
+  return { kind: 'api', message: err instanceof Error ? err.message : 'Failed to launch scan' };
+}
+
+function launchErrorTitle(kind: LaunchErrorKind): string {
+  switch (kind) {
+    case 'network':
+      return 'Network error — unable to reach the API';
+    case 'validation':
+      return 'Invalid scan request';
+    case 'api':
+      return 'API error';
+  }
+}
+
 function NewScanFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,6 +67,7 @@ function NewScanFormContent() {
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [launchError, setLaunchError] = useState<LaunchError | null>(null);
 
   const {
     register,
@@ -92,14 +128,11 @@ function NewScanFormContent() {
     try {
       setSubmitting(true);
       setError(null);
+      setLaunchError(null);
       const newScan = await scansService.create(data);
       router.push(`/dashboard/scans/${newScan.id}`);
     } catch (err) {
-      if (isApiError(err)) {
-        setError(err.message);
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to launch scan');
-      }
+      setLaunchError(classifyLaunchError(err));
       setSubmitting(false);
     }
   };
@@ -127,6 +160,15 @@ function NewScanFormContent() {
       />
 
       {error && <Alert>{error}</Alert>}
+
+      {launchError && (
+        <Alert>
+          <div className="space-y-1">
+            <p className="font-semibold">{launchErrorTitle(launchError.kind)}</p>
+            <p className="text-sm">{launchError.message}</p>
+          </div>
+        </Alert>
+      )}
 
       {projects.length === 0 ? (
         <div className="rounded-xl border border-slate-800 bg-slate-950 p-12 text-center text-slate-400 space-y-4">

@@ -7,27 +7,15 @@ export class ScansService {
   }
 
   async getAll(token?: string): Promise<Scan[]> {
-    try {
-      return await apiRequest<Scan[]>('/scans', { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Scan[]>('/scans', { token: this.getToken(token) });
   }
 
-  async getById(id: string, token?: string): Promise<Scan | null> {
-    try {
-      return await apiRequest<Scan>(`/scans/${id}`, { token: this.getToken(token) });
-    } catch {
-      return null;
-    }
+  async getById(id: string, token?: string): Promise<Scan> {
+    return apiRequest<Scan>(`/scans/${id}`, { token: this.getToken(token) });
   }
 
   async getByTarget(targetId: string, token?: string): Promise<Scan[]> {
-    try {
-      return await apiRequest<Scan[]>(`/targets/${targetId}/scans`, { token: this.getToken(token) });
-    } catch {
-      return [];
-    }
+    return apiRequest<Scan[]>(`/targets/${targetId}/scans`, { token: this.getToken(token) });
   }
 
   async create(data: CreateScanRequest, token?: string): Promise<Scan> {
